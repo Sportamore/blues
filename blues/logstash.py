@@ -41,6 +41,8 @@ is_server = lambda: blueprint.get('server') is not None
 is_client = lambda: blueprint.get('forwarder') is not None
 
 
+
+
 @task
 def setup():
     """
@@ -155,7 +157,7 @@ def create_server_ssl_cert():
 
 
 def download_server_ssl_cert(destination='ssl/'):
-    blueprint.download('/etc/pki/tls/certs/logstash-forwarder.crt', destination)
+    blueprint.download(LOGSTASH_CERT_PATH, destination)
 
 
 def configure_server(config, auto_disable_conf=True, **context):
@@ -230,20 +232,34 @@ def install_forwarder():
 
 
 def upgrade_forwarder():
-    files_json = json.dumps(blueprint.get('forwarder.files', []), indent=2).replace('\n', '\n  ')
     servers = ', '.join('"{}:5000"'.format(s) for s in blueprint.get('forwarder.servers', []))
+    files = blueprint.get('forwarder.files', [])
+    files_json = json.dumps([
+        {
+            'paths': f['paths'],
+            'fields': {
+                'type': f['log_type']
+            }
+        }
+        for f in files
+    ], indent=2).replace('\n', '\n  ')
+
     context = {
         'use_ssl': blueprint.get('use_ssl', True),
         'servers': servers,
         'files': files_json
     }
-    uploads = blueprint.upload('forwarder/logstash-forwarder.conf', '/etc/logstash-forwarder',
+
+    uploads = blueprint.upload('forwarder/logstash-forwarder.conf',
+                               '/etc/logstash-forwarder.conf',
                                context=context)
 
     ssl_path = 'ssl/logstash-forwarder.crt'
     if not os.path.exists(blueprint.get_user_template_path(ssl_path)):
         download_server_ssl_cert(ssl_path)
-    blueprint.upload('ssl/logstash-forwarder.crt', '/etc/pki/tls/certs/')
+
+    debian.mkdir('/etc/pki/tls/certs')
+    blueprint.upload(ssl_path, '/etc/pki/tls/certs/')
 
     if uploads:
         restart('forwarder')
