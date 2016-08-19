@@ -219,7 +219,10 @@ def install_forwarder():
 
         info('Installing {}', 'logstash forwarder')
         debian.apt_get('update')
-        debian.apt_get('install', 'logstash-forwarder')
+
+        # Since deprecating logstash-forwarder in favour of filebeat, the repo
+        # key is no longer available and installs must be forced.
+        debian.apt_get('install', '--force-yes', 'logstash-forwarder')
 
         # Upload init script
         blueprint.upload('forwarder/init.d/logstash-forwarder', '/etc/init.d/')
