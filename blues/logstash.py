@@ -41,8 +41,6 @@ is_server = lambda: blueprint.get('server') is not None
 is_client = lambda: blueprint.get('forwarder') is not None
 
 
-
-
 @task
 def setup():
     """
@@ -157,7 +155,7 @@ def create_server_ssl_cert():
 
 
 def download_server_ssl_cert(destination='ssl/'):
-    blueprint.download(LOGSTASH_CERT_PATH, destination)
+    blueprint.download('/etc/pki/tls/certs/logstash-forwarder.crt', destination)
 
 
 def configure_server(config, auto_disable_conf=True, **context):
