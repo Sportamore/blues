@@ -219,7 +219,10 @@ def install_forwarder():
 
         info('Installing {}', 'logstash forwarder')
         debian.apt_get('update')
-        debian.apt_get('install', 'logstash-forwarder')
+
+        # Since deprecating logstash-forwarder in favour of filebeat, the repo
+        # key is no longer available and installs must be forced.
+        debian.apt_get('install', '--force-yes', 'logstash-forwarder')
 
         # Upload init script
         blueprint.upload('forwarder/init.d/logstash-forwarder', '/etc/init.d/')
@@ -230,20 +233,34 @@ def install_forwarder():
 
 
 def upgrade_forwarder():
-    files_json = json.dumps(blueprint.get('forwarder.files', []), indent=2).replace('\n', '\n  ')
     servers = ', '.join('"{}:5000"'.format(s) for s in blueprint.get('forwarder.servers', []))
+    files = blueprint.get('forwarder.files', [])
+    files_json = json.dumps([
+        {
+            'paths': f['paths'],
+            'fields': {
+                'type': f['log_type']
+            }
+        }
+        for f in files
+    ], indent=2).replace('\n', '\n  ')
+
     context = {
         'use_ssl': blueprint.get('use_ssl', True),
         'servers': servers,
         'files': files_json
     }
-    uploads = blueprint.upload('forwarder/logstash-forwarder.conf', '/etc/logstash-forwarder',
+
+    uploads = blueprint.upload('forwarder/logstash-forwarder.conf',
+                               '/etc/logstash-forwarder.conf',
                                context=context)
 
     ssl_path = 'ssl/logstash-forwarder.crt'
     if not os.path.exists(blueprint.get_user_template_path(ssl_path)):
         download_server_ssl_cert(ssl_path)
-    blueprint.upload('ssl/logstash-forwarder.crt', '/etc/pki/tls/certs/')
+
+    debian.mkdir('/etc/pki/tls/certs')
+    blueprint.upload(ssl_path, '/etc/pki/tls/certs/')
 
     if uploads:
         restart('forwarder')
