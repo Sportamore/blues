@@ -44,7 +44,7 @@ def setup():
     blueprint.upload('default/rabbitmq-server',
                      '/etc/default/rabbitmq-server',
                      context={
-                        'ulimit': blueprint.get('rabbitmq.ulimit', '102400')
+                        'ulimit': blueprint.get('ulimit', '102400')
                      })
 
     configure()
