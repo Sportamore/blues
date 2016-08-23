@@ -41,6 +41,12 @@ def setup():
     else:
         install_stable()
 
+    blueprint.upload('default/rabbitmq-server',
+                     '/etc/default/rabbitmq-server',
+                     context={
+                        'ulimit': blueprint.get('ulimit', '102400')
+                     })
+
     configure()
 
     enable_plugins('rabbitmq_management')
