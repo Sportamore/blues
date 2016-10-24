@@ -11,9 +11,9 @@ Elasticsearch Blueprint
 
     settings:
       elasticsearch:
-        branch: 2.x                        # Major Version of elasticsearch to install (Required)
+        version: 2.4.1                     # Speciifc version of elasticsearch to install (Required)
         cluster_name: foobar               # Name of the cluster (Default: elasticsearch)
-        # version: 2.3.1                   # Speciifc version of elasticsearch to install (otherwise latest)
+        # branch: 2.x                      # Major Version of elasticsearch (default: 2.x)
         # heap_size: 1g                    # Heap Size (defaults to 256m min, 1g max)
         # number_of_shards: 1              # Number of shards/splits of an index (Default: 5)
         # number_of_replicas: 0            # Number of replicas / additional copies of an index (Default: 0)
@@ -73,7 +73,8 @@ def install():
         debian.apt_get_update()
 
         # Install elasticsearch (and java)
-        version = blueprint.get('version', '')
+        version = blueprint.get('version', '2.4.0')
+        info('Installing elasticsearch version "{}"', version)
         package = 'elasticsearch' + ('={}'.format(version) if version else '')
 
         info('Installing {}', package)
@@ -125,4 +126,4 @@ def install_plugin(name=None):
         abort('No plugin name given')
 
     with sudo():
-        run('/usr/share/elasticsearch/bin/plugin -install {}'.format(name))
+        run('/usr/share/elasticsearch/bin/plugin install {}'.format(name))
