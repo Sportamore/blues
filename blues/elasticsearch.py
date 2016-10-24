@@ -11,8 +11,9 @@ Elasticsearch Blueprint
 
     settings:
       elasticsearch:
-        version: 1.5                       # Version of elasticsearch to install (Required)
+        branch: 2.x                        # Major Version of elasticsearch to install (Required)
         cluster_name: foobar               # Name of the cluster (Default: elasticsearch)
+        # version: 2.3.1                   # Speciifc version of elasticsearch to install (otherwise latest)
         # heap_size: 1g                    # Heap Size (defaults to 256m min, 1g max)
         # number_of_shards: 1              # Number of shards/splits of an index (Default: 5)
         # number_of_replicas: 0            # Number of replicas / additional copies of an index (Default: 0)
@@ -61,18 +62,22 @@ def install():
         from blues import java
         java.install()
 
-        version = blueprint.get('version', '1.0')
-        info('Adding apt repository for {} version {}', 'elasticsearch', version)
-        repository = 'http://packages.elasticsearch.org/elasticsearch/{0}/debian stable main'.format(version)
+        branch = blueprint.get('branch', '2.x')
+
+        info('Adding apt repository for {} branch {}', 'elasticsearch', branch)
+        repository = 'https://packages.elastic.co/elasticsearch/{0}/debian stable main'.format(branch)
         debian.add_apt_repository(repository)
 
         info('Adding apt key for', repository)
-        debian.add_apt_key('http://packages.elasticsearch.org/GPG-KEY-elasticsearch')
+        debian.add_apt_key('https://packages.elastic.co/GPG-KEY-elasticsearch')
         debian.apt_get_update()
 
         # Install elasticsearch (and java)
-        info('Installing {} version {}', 'elasticsearch', version)
-        debian.apt_get('install', 'elasticsearch')
+        version = blueprint.get('version', '')
+        package = 'elasticsearch' + ('={}'.format(version) if version else '')
+
+        info('Installing {}', package)
+        debian.apt_get('install', package)
 
         # Install plugins
         plugins = blueprint.get('plugins', [])
