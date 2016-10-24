@@ -11,7 +11,9 @@ Kibana Blueprint
 
     settings:
       kibana:
-        version: 3.1.2  # Version of kibana to install (Required)
+        version: 4.6            # Version of kibana to install (Required)
+        basepath: ""            # External url prefix (must not end with slash)
+        landing_page: discover  # Kibana app to load by default
 
 """
 import os.path
@@ -26,32 +28,40 @@ from refabric.contrib import blueprints
 
 from . import debian
 
-__all__ = ['setup', 'configure', 'generate_nginx_conf']
-
+__all__ = ['start', 'stop', 'restart', 'setup', 'configure']
 
 blueprint = blueprints.get(__name__)
+
+start = debian.service_task('kibana', 'start')
+stop = debian.service_task('kibana', 'stop')
+restart = debian.service_task('kibana', 'restart')
+
+start.__doc__ = 'Start Kibana'
+stop.__doc__ = 'Stop Kibana'
+restart.__doc__ = 'Restart Kibana'
 
 
 @task
 def setup():
+    """
+    Install and configure kibana
+    """
     install()
     configure()
 
 
 def install():
     with sudo():
-        info('Downloading kibana')
-        version = blueprint.get('version', '3.1.2')
-        tar_file = 'kibana-{}.tar.gz'.format(version)
-        run('wget -P /tmp/ https://download.elasticsearch.org/kibana/kibana/{f}'.format(f=tar_file))
+        version = blueprint.get('version', '4.6')
+        info('Adding apt repository for {} version {}', 'kibana', version)
+        debian.add_apt_repository('https://packages.elastic.co/kibana/{}/debian stable main'.format(version))
 
-        # Extract and soft link kibana in web root
-        web_root = '/srv/www/'
-        debian.mkdir(web_root, mode=1775, owner='www-data', group='www-data')
-        run('tar xzf /tmp/{f} -C {web_root}'.format(f=tar_file, web_root=web_root))
-        src_root = os.path.join(web_root, 'kibana-{version}'.format(version=version))
-        debian.chown(src_root, owner='www-data', group='www-data', recursive=True)
-        debian.ln(src_root, '/srv/www/kibana')
+        info('Installing {} version {}', 'kibana', version)
+        debian.apt_get_update()
+        debian.apt_get('install', 'kibana')
+
+        # Enable on boot
+        debian.add_rc_service('kibana', priorities='defaults 95 10')
 
 
 @task
@@ -59,38 +69,11 @@ def configure():
     """
     Configure Kibana
     """
-    blueprint.upload('config.js', '/srv/www/kibana/', user='www-data', group='www-data')
-
-
-@task
-def generate_nginx_conf(role='www'):
-    """
-    Generate nginx config for reverse proxying Kibana application
-    """
-    info('Generating kibana config to nginx@{}...'.format(role))
     context = {
-        'domain': blueprint.get('domain', '_'),
-        'elasticsearch_host': blueprint.get('elasticsearch_host', '127.0.0.1')
+        'basepath': blueprint.get('basepath', ''),
+        'landing_page': blueprint.get('landing_page', 'discover')
     }
-    template = 'nginx/kibana.conf'
-    conf = blueprint.render_template(template, context)
-    pwd = os.path.dirname(env['real_fabfile'])
+    config = blueprint.upload('./kibana.yml', '/opt/kibana/config/', context)
 
-    for _dir, _conf in [('sites-available', 'kibana.conf'), ('includes', 'kibana-locations.conf')]:
-        conf_dir = os.path.join(pwd, 'templates', role, 'nginx', _dir)
-        conf_path = os.path.join(conf_dir, _conf)
-
-        if not os.path.exists(conf_dir):
-            os.makedirs(conf_dir)
-
-        with open(conf_path, 'w+') as f:
-            f.write(conf)
-
-    info('Select username and password...')
-    passwd_dir = os.path.join(pwd, 'templates', role, 'nginx', 'conf.d')
-    passwd_path = os.path.join(passwd_dir, 'kibana.htpasswd')
-    if not os.path.exists(passwd_dir):
-        os.makedirs(passwd_dir)
-    username = prompt('Username:', default='kibana')
-    local('htpasswd -c {filename} {username}'.format(filename=passwd_path,
-                                                     username=username))
+    if config:
+        restart()
