@@ -10,8 +10,24 @@ Logstash Blueprint
       - blues.logstash
 
     settings:
-      logstash: # TODO
+      logstash:
+        use_ssl: true
 
+        server:
+          version: 2.4
+          elasticsearch_host: 127.0.0.1ll
+          auto_disable_conf: true
+          config:
+            10: sample_stuff.conf
+
+        forwarder:
+          servers:
+            - some.host.tld
+
+          files:
+            - log_type: nginx-access
+              paths:
+                - /var/log/nginx/*_access.log
 
 """
 import json
@@ -37,6 +53,7 @@ blueprint = blueprints.get(__name__)
 logstash_root = '/etc/logstash'
 conf_available_path = os.path.join(logstash_root, 'conf.templates')
 conf_enabled_path = os.path.join(logstash_root, 'conf.d')
+
 is_server = lambda: blueprint.get('server') is not None
 is_client = lambda: blueprint.get('forwarder') is not None
 
@@ -123,9 +140,9 @@ def enable(conf, weight, do_restart=True):
 
 def install_server():
     with sudo():
-        version = blueprint.get('server.version', '1.4')
+        version = blueprint.get('server.version', '2.4')
         info('Adding apt repository for {} version {}', 'logstash', version)
-        debian.add_apt_repository('http://packages.elasticsearch.org/logstash/{}/debian stable main'.format(version))
+        debian.add_apt_repository('https://packages.elastic.co/logstash/{}/debian stable main'.format(version))
 
         info('Installing {} version {}', 'logstash', version)
         debian.apt_get_update()
