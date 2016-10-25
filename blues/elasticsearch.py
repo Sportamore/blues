@@ -24,7 +24,7 @@ Elasticsearch Blueprint
           # bind_host: 127.0.0.1           # Set the bind address specifically, IPv4 or IPv6 (Default: 0.0.0.0)
           # publish_host: 127.0.0.1        # Set the address other nodes will use to communicate with this node (Optional)
           # host: 127.0.0.1                # Set both `network_bind_host` and `network_publish_host` (Optional)
-        # multicast_discovery:             # Use multicast discovery (default: True)
+          # discovery:                     # Use multicast discovery (default: True)
         # default_shards: 5                # Number of shards/splits of an index (Default: 5)
         # default_replicas: 0              # Number of replicas / additional copies of an index (Default: 0)
         # mlockall: true                   # Allocate all allowed memory on startup (Default: True)
@@ -117,7 +117,7 @@ def configure():
         'bind_host': blueprint.get('network.bind_host'),
         'publish_host': blueprint.get('network.publish_host'),
         'host': blueprint.get('network.host'),
-        'zen_multicast': yaml_boolean(blueprint.get('multicast_discovery', True)),
+        'zen_multicast': yaml_boolean(blueprint.get('network.discovery', True)),
         'number_of_shards': blueprint.get('default_shards', '5'),
         'number_of_replicas': blueprint.get('default_replicas', '0'),
         'mlockall': yaml_boolean(mlockall),
