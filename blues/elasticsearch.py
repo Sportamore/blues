@@ -21,10 +21,9 @@ Elasticsearch Blueprint
           # master: true                   # Allow node to be elected master (Default: True)
           # data: true                     # Allow node to store data (Default: True)
         # network:
-          # bind_host: 127.0.0.1           # Set the bind address specifically, IPv4 or IPv6 (Default: 0.0.0.0)
-          # publish_host: 127.0.0.1        # Set the address other nodes will use to communicate with this node (Optional)
-          # host: 127.0.0.1                # Set both `network_bind_host` and `network_publish_host` (Optional)
-          # discovery:                     # Use multicast discovery (default: True)
+          # bind_host: _site_              # Set the bind address specifically, IPv4 or IPv6 (Default: _local_)
+          # publish_host: 10.10.1.1        # Set the address other nodes will use to communicate with this node (Default: hostname)
+          # discovery: true                # Use multicast discovery (default: True)
         # default_shards: 5                # Number of shards/splits of an index (Default: 5)
         # default_replicas: 0              # Number of replicas / additional copies of an index (Default: 0)
         # mlockall: true                   # Allocate all allowed memory on startup (Default: True)
@@ -34,6 +33,8 @@ Elasticsearch Blueprint
         #   - mobz/elasticsearch-head
 
 """
+import yaml
+
 from fabric.decorators import task
 from fabric.utils import abort
 
@@ -107,20 +108,23 @@ def configure():
     """
     Configure Elasticsearch
     """
-    mlockall = blueprint.get('mlockall', True)
+    hostname = debian.hostname()
+    memory_lock = blueprint.get('node.lock_memory', True)
+    cluster_nodes = blueprint.get('cluster.nodes', [])
+    cluster_size = len(cluster_nodes)
 
     context = {
         'cluster_name': blueprint.get('cluster.name', 'elasticsearch'),
-        'node_name': blueprint.get('node.name', debian.hostname()),
+        'cluster_size': cluster_size,
+        'zen_multicast': yaml_boolean(blueprint.get('cluster.discovery', True)),
+        'zen_unicast_hosts': yaml.dump(cluster_nodes) if len(cluster_nodes) else None,
+        'node_name': blueprint.get('node.name', hostname),
         'node_master': yaml_boolean(blueprint.get('node.master', True)),
         'node_data': yaml_boolean(blueprint.get('node.data', True)),
-        'bind_host': blueprint.get('network.bind_host'),
-        'publish_host': blueprint.get('network.publish_host'),
-        'host': blueprint.get('network.host'),
-        'zen_multicast': yaml_boolean(blueprint.get('network.discovery', True)),
+        'network_host': blueprint.get('node.bind', '_local_'),
         'number_of_shards': blueprint.get('default_shards', '5'),
         'number_of_replicas': blueprint.get('default_replicas', '0'),
-        'mlockall': yaml_boolean(mlockall),
+        'memory_lock': yaml_boolean(memory_lock),
         'queue_size': blueprint.get('queue_size', '1000')
     }
     config = blueprint.upload('./elasticsearch.yml', '/etc/elasticsearch/', context)
@@ -134,7 +138,7 @@ def configure():
 
     context = {
         'heap_size': blueprint.get('node.heap_size', '256m'),
-        'max_locked_memory': "unlimited" if mlockall else ""
+        'max_locked_memory': "unlimited" if memory_lock else ""
     }
     default = blueprint.upload('./default', '/etc/default/elasticsearch', context)
 

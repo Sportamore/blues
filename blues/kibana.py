@@ -11,10 +11,10 @@ Kibana Blueprint
 
     settings:
       kibana:
-        version: 4.6            # Version of kibana to install (Required)
-        es_host: localhost      # Elasticsearch server target (Default: localhost)
-        basepath: ""            # External url prefix (must not end with slash)
-        landing_page: discover  # Kibana app to load by default
+        version: 4.6                   # Version of kibana to install (Required)
+        elasticsearch_host: localhost  # Elasticsearch server target (Default: localhost)
+        basepath: ""                   # External url prefix (must not end with slash)
+        landing_page: discover         # Kibana app to load by default
 
 """
 import os.path
@@ -71,7 +71,7 @@ def configure():
     Configure Kibana
     """
     context = {
-        'es_host': blueprint.get('es_host', 'localhost'),
+        'elasticsearch_host': blueprint.get('elasticsearch_host', 'localhost'),
         'basepath': blueprint.get('basepath', ''),
         'landing_page': blueprint.get('landing_page', 'discover')
     }
