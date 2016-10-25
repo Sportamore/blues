@@ -11,23 +11,25 @@ Logstash Blueprint
 
     settings:
       logstash:
-        use_ssl: true
+        use_ssl: true                      # Secure communication between forwarder and server (Default: True)
 
-        server:
-          version: 2.4
-          elasticsearch_host: 127.0.0.1ll
-          auto_disable_conf: true
-          config:
-            10: sample_stuff.conf
+        server:                            # The presence of this key will cause the host to be considered a server
+          version: 2.4                     # Version of the server to install (Default: 2.4)
+          elasticsearch_host: localhost    # ES Server address (Default: localhost)
+          auto_disable_conf: True          # Disable any config files not listed in 'config' (Default: True)
+          config:                          # Mapping of weight: config_file
+            11: lumberjack-input.conf      # Included logstash-forwarder input handler
+            21: syslog.conf                # Included syslog grokker
+            91: lumberjack-output.conf     # Included elasticsearch output handler
 
-        forwarder:
-          servers:
+        forwarder:                         # The presence of this key will install the forwarder
+          servers:                         # One or more target servers (Required)
             - some.host.tld
 
-          files:
-            - log_type: nginx-access
-              paths:
-                - /var/log/nginx/*_access.log
+          files:                           # One or more file sets
+            - log_type: nginx-access       # The type to inject into each message
+              paths:                       # One or more files within this set (Required)
+                - /var/log/*.log           # Wildcards are supported
 
 """
 import json
@@ -177,7 +179,7 @@ def download_server_ssl_cert(destination='ssl/'):
 
 def configure_server(config, auto_disable_conf=True, **context):
     context.setdefault('use_ssl', True)
-    context.setdefault('elasticsearch_host', '127.0.0.1')
+    context.setdefault('elasticsearch_host', 'localhost')
     uploads = blueprint.upload('./server/', '/etc/logstash/', context)
 
     # Disable previously enabled conf not configured through config in settings
