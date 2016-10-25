@@ -15,18 +15,18 @@ Elasticsearch Blueprint
         version: 2.4.1                     # Speciifc version of elasticsearch to install (Required)
         # cluster:
           # name: foobar                   # Name of the cluster (Default: elasticsearch)
+          # discovery: true                # Enable multicast discovery (default: True)
+          # nodes:                         # Nodes to explicitly add to the cluster (Optional)
+            # - node
         # node:
           # name: foobarnode               # Node name (Default: <hostname>)
           # heap_size: 16gb                # Heap Size (defaults to 256m min, 1g max)
+          # lock_memory: true              # Allocate the entire heap during startup (Default: True)
           # master: true                   # Allow node to be elected master (Default: True)
           # data: true                     # Allow node to store data (Default: True)
-        # network:
-          # bind_host: _site_              # Set the bind address specifically, IPv4 or IPv6 (Default: _local_)
-          # publish_host: 10.10.1.1        # Set the address other nodes will use to communicate with this node (Default: hostname)
-          # discovery: true                # Use multicast discovery (default: True)
+          # bind: _site_                   # Set the bind address specifically, IPv4 or IPv6 (Default: _local_)
         # default_shards: 5                # Number of shards/splits of an index (Default: 5)
         # default_replicas: 0              # Number of replicas / additional copies of an index (Default: 0)
-        # mlockall: true                   # Allocate all allowed memory on startup (Default: True)
         # queue_size: 3000                 # Set thread pool queue size (Default: 1000)
         # log_level: WARN                  # Set the log level to use (Default: WARN)
         # plugins:                         # Optional list of plugins to install
@@ -39,7 +39,7 @@ from fabric.decorators import task
 from fabric.utils import abort
 
 from refabric.api import info
-from refabric.context_managers import sudo
+from refabric.context_managers import sudo, silent
 from refabric.contrib import blueprints
 
 from . import debian
@@ -108,10 +108,14 @@ def configure():
     """
     Configure Elasticsearch
     """
-    hostname = debian.hostname()
-    memory_lock = blueprint.get('node.lock_memory', True)
+    with silent():
+        hostname = debian.hostname()
+
+    mlockall = blueprint.get('node.lock_memory', True)
     cluster_nodes = blueprint.get('cluster.nodes', [])
     cluster_size = len(cluster_nodes)
+
+    changes = []
 
     context = {
         'cluster_name': blueprint.get('cluster.name', 'elasticsearch'),
@@ -122,27 +126,28 @@ def configure():
         'node_master': yaml_boolean(blueprint.get('node.master', True)),
         'node_data': yaml_boolean(blueprint.get('node.data', True)),
         'network_host': blueprint.get('node.bind', '_local_'),
+        'heap_size': blueprint.get('node.heap_size', '256m'),
         'number_of_shards': blueprint.get('default_shards', '5'),
         'number_of_replicas': blueprint.get('default_replicas', '0'),
-        'memory_lock': yaml_boolean(memory_lock),
-        'queue_size': blueprint.get('queue_size', '1000')
-    }
-    config = blueprint.upload('./elasticsearch.yml', '/etc/elasticsearch/', context)
-
-    context = {
+        'queue_size': blueprint.get('queue_size', '1000'),
         'log_level': blueprint.get('log_level', 'WARN'),
+        'memory_lock': yaml_boolean(mlockall),
+        'mlockall': mlockall
     }
-    logging = blueprint.upload('./logging.yml', '/etc/elasticsearch/', context)
 
-    debian.chmod('/etc/elasticsearch/', group='elasticsearch', recursive=True)
+    changes += blueprint.upload('./elasticsearch.yml', '/etc/elasticsearch/',
+                                context=context, user='elasticsearch')
+    changes += blueprint.upload('./logging.yml', '/etc/elasticsearch/',
+                                context=context, user='elasticsearch')
 
-    context = {
-        'heap_size': blueprint.get('node.heap_size', '256m'),
-        'max_locked_memory': "unlimited" if memory_lock else ""
-    }
-    default = blueprint.upload('./default', '/etc/default/elasticsearch', context)
+    changes += blueprint.upload('./default', '/etc/default/elasticsearch', context)
 
-    if config or logging or default:
+    service_dir = "/etc/systemd/system/elasticsearch.service.d"
+
+    debian.mkdir(service_dir)
+    changes += blueprint.upload('./override.conf', service_dir + '/override.conf', context)
+
+    if changes:
         restart()
 
 
