@@ -15,13 +15,12 @@ Kibana Blueprint
         elasticsearch_host: localhost  # Elasticsearch server target (Default: localhost)
         basepath: ""                   # External url prefix (must not end with slash)
         landing_page: discover         # Kibana app to load by default
+        plugins:                       # Optional list of plugins to install
+          - elasticsearch/marvel/latest
 
 """
-import os.path
-
 from fabric.decorators import task
-from fabric.operations import local, prompt
-from fabric.state import env
+from fabric.utils import abort
 
 from refabric.api import run, info
 from refabric.context_managers import sudo
@@ -29,7 +28,7 @@ from refabric.contrib import blueprints
 
 from . import debian
 
-__all__ = ['start', 'stop', 'restart', 'setup', 'configure']
+__all__ = ['start', 'stop', 'restart', 'setup', 'configure', 'install_plugin']
 
 blueprint = blueprints.get(__name__)
 
@@ -64,6 +63,12 @@ def install():
         # Enable on boot
         debian.add_rc_service('kibana', priorities='defaults 95 10')
 
+        # Install plugins
+        plugins = blueprint.get('plugins', [])
+        for plugin in plugins:
+            info('Installing kibana plugin: "{}" ...', plugin)
+            install_plugin(plugin)
+
 
 @task
 def configure():
@@ -79,3 +84,15 @@ def configure():
 
     if config:
         restart()
+
+
+@task
+def install_plugin(name=None):
+    """
+    Install a single kibana plugin
+    """
+    if not name:
+        abort('No plugin name given')
+
+    with sudo():
+        run('/opt/kibana/bin/kibana plugin --install {}'.format(name))
