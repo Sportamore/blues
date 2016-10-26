@@ -27,12 +27,11 @@ Logstash Blueprint
             - some.host.tld
 
           files:                           # One or more file sets
-            - log_type: nginx-access       # The type to inject into each message
+            - type: nginx-access           # The document_type to add to the event
               paths:                       # One or more files within this set (Required)
-                - /var/log/*.log           # Wildcards are supported
+                - '/var/log/*.log'         # Wildcards are supported
 
 """
-import json
 import yaml
 import os.path
 from functools import partial
@@ -70,7 +69,7 @@ def setup():
     if is_role('server'):
         install_server()
 
-    if is_role('client'):
+    if is_role('forwarder'):
         install_filebeat()
 
     configure()
@@ -84,7 +83,7 @@ def configure():
     if is_role('server'):
         upgrade_server()
 
-    if is_role('client'):
+    if is_role('forwarder'):
         configure_filebeat()
 
 
