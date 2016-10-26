@@ -33,6 +33,7 @@ Logstash Blueprint
 
 """
 import json
+import yaml
 import os.path
 from functools import partial
 
@@ -56,8 +57,9 @@ logstash_root = '/etc/logstash'
 conf_available_path = os.path.join(logstash_root, 'conf.templates')
 conf_enabled_path = os.path.join(logstash_root, 'conf.d')
 
-is_server = lambda: blueprint.get('server') is not None
-is_client = lambda: blueprint.get('forwarder') is not None
+
+def is_role(role):
+    return blueprint.get(role) is not None
 
 
 @task
@@ -65,10 +67,12 @@ def setup():
     """
     Setup Logstash server and/or forwarder
     """
-    if is_server():
+    if is_role('server'):
         install_server()
-    if is_client():
-        install_forwarder()
+
+    if is_role('client'):
+        install_filebeat()
+
     configure()
 
 
@@ -77,10 +81,11 @@ def configure():
     """
     Configure Logstash server and/or forwarder
     """
-    if is_server():
+    if is_role('server'):
         upgrade_server()
-    if is_client():
-        upgrade_forwarder()
+
+    if is_role('client'):
+        configure_filebeat()
 
 
 @task
@@ -165,8 +170,8 @@ def create_server_ssl_cert():
         debian.mkdir('/etc/pki/tls/private')
         with cd('/etc/pki/tls'):
             hostname = debian.hostname()
-            key = 'private/logstash-forwarder.key'
-            crt = 'certs/logstash-forwarder.crt'
+            key = 'private/logstash.key'
+            crt = 'certs/logstash.crt'
             run('openssl req -x509 -batch -nodes -days 3650 -newkey rsa:2048 '
                 '-keyout {} '
                 '-out {} '
@@ -174,7 +179,7 @@ def create_server_ssl_cert():
 
 
 def download_server_ssl_cert(destination='ssl/'):
-    blueprint.download('/etc/pki/tls/certs/logstash-forwarder.crt', destination)
+    blueprint.download('/etc/pki/tls/certs/logstash.crt', destination)
 
 
 def configure_server(config, auto_disable_conf=True, **context):
@@ -216,70 +221,65 @@ def upgrade_server():
         restart('server')
 
 
-def install_forwarder():
-    """
-    TODO: Build from github
-
-    - wget https://storage.googleapis.com/golang/go1.4.1.linux-amd64.tar.gz
-    - gunzip <go>
-    - mv go /usr/local/
-    - apt-get install unzip make ruby ruby-dev
-    - wget https://github.com/elasticsearch/logstash-forwarder/archive/master.zip
-    - unzip <forwarder>
-    - cd <forwarder>
-    - go build
-    - gem install fpm
-    - make deb
-    - dpkg -i <forwarder>
-    """
+def install_filebeat():
     with sudo():
-        info('Adding apt repository for {}', 'logstash forwarder')
-        debian.add_apt_repository('http://packages.elasticsearch.org/logstashforwarder/debian stable main')
+        info('Adding apt repository for FileBeat')
+        debian.add_apt_repository('https://packages.elastic.co/beats/apt stable main')
 
-        info('Installing {}', 'logstash forwarder')
-        debian.apt_get('update')
-
-        # Since deprecating logstash-forwarder in favour of filebeat, the repo
-        # key is no longer available and installs must be forced.
-        debian.apt_get('install', '--force-yes', 'logstash-forwarder')
-
-        # Upload init script
-        blueprint.upload('forwarder/init.d/logstash-forwarder', '/etc/init.d/')
-        debian.chmod('/etc/init.d/logstash-forwarder', mode=755)
+        info('Installing FileBeat')
+        debian.apt_get_update()
+        debian.apt_get('install', 'filebeat')
 
         # Enable on boot
-        debian.add_rc_service('logstash-forwarder')
+        debian.add_rc_service('filebeat')
 
 
-def upgrade_forwarder():
-    servers = ', '.join('"{}:5000"'.format(s) for s in blueprint.get('forwarder.servers', []))
-    files = blueprint.get('forwarder.files', [])
-    files_json = json.dumps([
-        {
-            'paths': f['paths'],
-            'fields': {
-                'type': f['log_type']
+def configure_filebeat():
+    output_cfg = {
+        'output': {
+            'logstash': {
+                'hosts': [
+                    '"{}:5000"'.format(s)
+                    for s in blueprint.get('forwarder.servers', [])
+                ]
             }
         }
-        for f in files
-    ], indent=2).replace('\n', '\n  ')
-
-    context = {
-        'use_ssl': blueprint.get('use_ssl', True),
-        'servers': servers,
-        'files': files_json
     }
 
-    uploads = blueprint.upload('forwarder/logstash-forwarder.conf',
-                               '/etc/logstash-forwarder.conf',
+    if blueprint.get('ssl', True):
+        output_cfg['output']['logstash']["tls"] = {
+            'certificate_authorities': [
+                '/etc/pki/tls/certs/logstash.crt',
+            ]
+        }
+
+    filebeat_cfg = {
+        'filebeat': {
+            'prospectors': [
+                {
+                    'paths': f['paths'],
+                    'document_type': f['type']
+                }
+                for f in blueprint.get('forwarder.files', [])
+            ]
+        }
+    }
+
+    context = {
+        'output': yaml.dump(output_cfg),
+        'filebeat': yaml.dump(filebeat_cfg)
+    }
+
+    uploads = blueprint.upload('./forwarder/',
+                               '/etc/filebeat/',
                                context=context)
 
-    ssl_path = 'ssl/logstash-forwarder.crt'
+    ssl_path = 'ssl/logstash.crt'
     if not os.path.exists(blueprint.get_user_template_path(ssl_path)):
         download_server_ssl_cert(ssl_path)
 
     debian.mkdir('/etc/pki/tls/certs')
-    blueprint.upload(ssl_path, '/etc/pki/tls/certs/')
+    uploads += blueprint.upload(ssl_path, '/etc/pki/tls/certs/')
 
     if uploads:
         restart('forwarder')
@@ -291,10 +291,13 @@ def service(target=None, action=None):
     """
     if not target:
         abort('Missing logstash service target argument, start:<server|forwarder|both>')
+
     if target in ('server', 'both'):
         debian.service('logstash', action, check_status=False)
+
     if target in ('forwarder', 'both'):
-        debian.service('logstash-forwarder', action, check_status=False)
+        debian.service('filebeat', action, check_status=False)
+
 
 start = task(partial(service, action='start'))
 stop = task(partial(service, action='stop'))

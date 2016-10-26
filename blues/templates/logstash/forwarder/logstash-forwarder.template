@@ -1,8 +1,0 @@
-{
-  "network": {
-    "servers": [ {{ servers }} ]
-    , "timeout": 15
-    {% if use_ssl %}, "ssl ca": "/etc/pki/tls/certs/logstash-forwarder.crt"{%- endif %}
-  },
-  "files": {% block files %}{% endblock %}
-}
