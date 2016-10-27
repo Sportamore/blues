@@ -18,9 +18,10 @@ Logstash Blueprint
           elasticsearch_host: localhost    # ES Server address (Default: localhost)
           auto_disable_conf: True          # Disable any config files not listed in 'config' (Default: True)
           config:                          # Mapping of weight: config_file
-            11: lumberjack-input.conf      # Included logstash-forwarder input handler
-            21: syslog.conf                # Included syslog grokker
-            91: lumberjack-output.conf     # Included elasticsearch output handler
+            11: input-lumberjack           # Included logstash-forwarder input handler
+            12: input-lumberjack           # Included beats input handler
+            21: syslog                     # Included syslog grokker
+            91: output-elasticsearch       # Included elasticsearch output handler
 
         forwarder:                         # The presence of this key will install the forwarder
           servers:                         # One or more target servers (Required)
@@ -53,7 +54,7 @@ __all__ = ['setup', 'configure', 'enable', 'disable', 'start', 'stop', 'restart'
 blueprint = blueprints.get(__name__)
 
 logstash_root = '/etc/logstash'
-conf_available_path = os.path.join(logstash_root, 'conf.templates')
+conf_available_path = os.path.join(logstash_root, 'conf.available')
 conf_enabled_path = os.path.join(logstash_root, 'conf.d')
 
 
@@ -238,7 +239,7 @@ def configure_filebeat():
         'output': {
             'logstash': {
                 'hosts': [
-                    '"{}:5000"'.format(s)
+                    '"{}:5050"'.format(s)
                     for s in blueprint.get('forwarder.servers', [])
                 ]
             }
