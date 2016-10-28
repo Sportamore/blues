@@ -27,10 +27,9 @@ Logstash Blueprint
           servers:                         # One or more target servers (Required)
             - some.host.tld
 
-          files:                           # One or more file sets
-            - type: nginx-access           # The document_type to add to the event
-              paths:                       # One or more files within this set (Required)
-                - '/var/log/*.log'         # Wildcards are supported
+          files:                           # One or more file blocks
+            nginx-access:                  # The document_type to add to the event
+              - '/var/log/*.log'           # Wildcards are supported
 
 """
 import yaml
@@ -257,10 +256,11 @@ def configure_filebeat():
         'filebeat': {
             'prospectors': [
                 {
-                    'paths': f['paths'],
-                    'document_type': f['type']
+                    'paths': paths,
+                    'document_type': doc_type
                 }
-                for f in blueprint.get('forwarder.files', [])
+                for doc_type, paths
+                in blueprint.get('forwarder.files', {}).items()
             ]
         }
     }
