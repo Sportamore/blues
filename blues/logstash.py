@@ -11,7 +11,7 @@ Logstash Blueprint
 
     settings:
       logstash:
-        use_ssl: true                      # Secure communication between forwarder and server (Default: True)
+        ssl: true                          # Secure communication between forwarder and server (Default: True)
 
         server:                            # The presence of this key will cause the host to be considered a server
           version: 2.4                     # Version of the server to install (Default: 2.4)
@@ -157,6 +157,8 @@ def install_server():
         # Enable on boot
         debian.add_rc_service('logstash')
 
+        debian.mkdir('/etc/logstash/conf.d')
+
         # Create and download SSL cert
         create_server_ssl_cert()
         download_server_ssl_cert()
@@ -182,8 +184,9 @@ def download_server_ssl_cert(destination='ssl/'):
 
 
 def configure_server(config, auto_disable_conf=True, **context):
-    context.setdefault('use_ssl', True)
+    context.setdefault('ssl', True)
     context.setdefault('elasticsearch_host', 'localhost')
+
     uploads = blueprint.upload('./server/', '/etc/logstash/', context)
 
     # Disable previously enabled conf not configured through config in settings
@@ -209,7 +212,7 @@ def upgrade_server():
     config = blueprint.get('server.config', {})
     auto_disable_conf = blueprint.get('server.auto_disable_conf', True)
     context = {
-        'use_ssl': blueprint.get('use_ssl', True),
+        'ssl': blueprint.get('ssl', True),
         'elasticsearch_host': blueprint.get('server.elasticsearch_host', '127.0.0.1')
     }
 
