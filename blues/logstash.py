@@ -19,7 +19,7 @@ Logstash Blueprint
           auto_disable_conf: True          # Disable any config files not listed in 'config' (Default: True)
           config:                          # Mapping of weight: config_file
             11: input-lumberjack           # Included logstash-forwarder input handler
-            12: input-lumberjack           # Included beats input handler
+            12: input-beats                # Included beats input handler
             21: syslog                     # Included syslog grokker
             91: output-elasticsearch       # Included elasticsearch output handler
 
