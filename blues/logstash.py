@@ -241,7 +241,7 @@ def configure_filebeat():
         'output': {
             'logstash': {
                 'hosts': [
-                    '"{}:5050"'.format(s)
+                    '{}:5050'.format(s)
                     for s in blueprint.get('forwarder.servers', [])
                 ]
             }
@@ -249,7 +249,7 @@ def configure_filebeat():
     }
 
     if blueprint.get('ssl', True):
-        output_cfg['output']['logstash']["tls"] = {
+        output_cfg['output']['logstash']['tls'] = {
             'certificate_authorities': [
                 '/etc/pki/tls/certs/logstash.crt',
             ]
