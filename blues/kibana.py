@@ -56,6 +56,9 @@ def install():
         info('Adding apt repository for {} version {}', 'kibana', version)
         debian.add_apt_repository('https://packages.elastic.co/kibana/{}/debian stable main'.format(version))
 
+        info('Adding apt key for Elastic.co')
+        debian.add_apt_key('https://packages.elastic.co/GPG-KEY-elasticsearch')
+
         info('Installing {} version {}', 'kibana', version)
         debian.apt_get_update()
         debian.apt_get('install', 'kibana')

@@ -150,6 +150,9 @@ def install_server():
         info('Adding apt repository for {} version {}', 'logstash', version)
         debian.add_apt_repository('https://packages.elastic.co/logstash/{}/debian stable main'.format(version))
 
+        info('Adding apt key for Elastic.co')
+        debian.add_apt_key('https://packages.elastic.co/GPG-KEY-elasticsearch')
+
         info('Installing {} version {}', 'logstash', version)
         debian.apt_get_update()
         debian.apt_get('install', 'logstash')
@@ -227,6 +230,9 @@ def install_filebeat():
     with sudo():
         info('Adding apt repository for FileBeat')
         debian.add_apt_repository('https://packages.elastic.co/beats/apt stable main')
+
+        info('Adding apt key for Elastic.co')
+        debian.add_apt_key('https://packages.elastic.co/GPG-KEY-elasticsearch')
 
         info('Installing FileBeat')
         debian.apt_get_update()
