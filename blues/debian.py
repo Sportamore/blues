@@ -367,12 +367,25 @@ def update_rc(basename, priorities, force=False):
                                       priorities), pty=False, use_sudo=True)
 
 
+def systemd_service(name, action='is-enabled'):
+    name = name if name.endswith('.service') else '{}.service'.format(name)
+    run('systemctl {} {}'.format(action, name), pty=False, use_sudo=True)
+
+
 def add_rc_service(name, priorities='defaults'):
-    update_rc(name, priorities)
+    if lsb_release() == '16.04':
+        systemd_service(name, 'enable')
+
+    else:
+        update_rc(name, priorities)
 
 
 def remove_rc_service(name):
-    update_rc(name, priorities='remove', force=True)
+    if lsb_release() == '16.04':
+        systemd_service(name, 'disable')
+
+    else:
+        update_rc(name, priorities='remove', force=True)
 
 
 def nproc():

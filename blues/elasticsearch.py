@@ -11,25 +11,35 @@ Elasticsearch Blueprint
 
     settings:
       elasticsearch:
-        version: 1.5                       # Version of elasticsearch to install (Required)
-        cluster_name: foobar               # Name of the cluster (Default: elasticsearch)
-        # heap_size: 1g                    # Heap Size (defaults to 256m min, 1g max)
-        # number_of_shards: 1              # Number of shards/splits of an index (Default: 5)
-        # number_of_replicas: 0            # Number of replicas / additional copies of an index (Default: 0)
-        # network_bind_host: 127.0.0.1     # Set the bind address specifically, IPv4 or IPv6 (Default: 0.0.0.0)
-        # network_publish_host: 127.0.0.1  # Set the address other nodes will use to communicate with this node (Optional)
-        # network_host: 127.0.0.1          # Set both `network_bind_host` and `network_publish_host` (Optional)
+        # branch: 2.x                      # Major Version of elasticsearch (default: 2.x)
+        version: 2.4.1                     # Speciifc version of elasticsearch to install (Required)
+        # cluster:
+          # name: foobar                   # Name of the cluster (Default: elasticsearch)
+          # discovery: true                # Enable multicast discovery (default: True)
+          # nodes:                         # Nodes to explicitly add to the cluster (Optional)
+            # - node
+        # node:
+          # name: foobarnode               # Node name (Default: <hostname>)
+          # heap_size: 16gb                # Heap Size (defaults to 256m min, 1g max)
+          # lock_memory: true              # Allocate the entire heap during startup (Default: True)
+          # master: true                   # Allow node to be elected master (Default: True)
+          # data: true                     # Allow node to store data (Default: True)
+          # bind: _site_                   # Set the bind address specifically, IPv4 or IPv6 (Default: _local_)
+        # default_shards: 5                # Number of shards/splits of an index (Default: 5)
+        # default_replicas: 0              # Number of replicas / additional copies of an index (Default: 0)
         # queue_size: 3000                 # Set thread pool queue size (Default: 1000)
         # log_level: WARN                  # Set the log level to use (Default: WARN)
         # plugins:                         # Optional list of plugins to install
         #   - mobz/elasticsearch-head
 
 """
+import yaml
+
 from fabric.decorators import task
 from fabric.utils import abort
 
 from refabric.api import info
-from refabric.context_managers import sudo
+from refabric.context_managers import sudo, silent
 from refabric.contrib import blueprints
 
 from . import debian
@@ -61,18 +71,23 @@ def install():
         from blues import java
         java.install()
 
-        version = blueprint.get('version', '1.0')
-        info('Adding apt repository for {} version {}', 'elasticsearch', version)
-        repository = 'http://packages.elasticsearch.org/elasticsearch/{0}/debian stable main'.format(version)
+        branch = blueprint.get('branch', '2.x')
+
+        info('Adding apt repository for {} branch {}', 'elasticsearch', branch)
+        repository = 'https://packages.elastic.co/elasticsearch/{0}/debian stable main'.format(branch)
         debian.add_apt_repository(repository)
 
         info('Adding apt key for', repository)
-        debian.add_apt_key('http://packages.elasticsearch.org/GPG-KEY-elasticsearch')
+        debian.add_apt_key('https://packages.elastic.co/GPG-KEY-elasticsearch')
         debian.apt_get_update()
 
         # Install elasticsearch (and java)
-        info('Installing {} version {}', 'elasticsearch', version)
-        debian.apt_get('install', 'elasticsearch')
+        version = blueprint.get('version', '2.4.0')
+        info('Installing elasticsearch version "{}"', version)
+        package = 'elasticsearch' + ('={}'.format(version) if version else '')
+
+        info('Installing {}', package)
+        debian.apt_get('install', package)
 
         # Install plugins
         plugins = blueprint.get('plugins', [])
@@ -84,33 +99,55 @@ def install():
         debian.add_rc_service('elasticsearch', priorities='defaults 95 10')
 
 
+def yaml_boolean(input):
+    return str(input).lower()
+
+
 @task
 def configure():
     """
     Configure Elasticsearch
     """
-    context = {
-        'cluster_name': blueprint.get('cluster_name', 'elasticsearch'),
-        'number_of_shards': blueprint.get('number_of_shards', '5'),
-        'number_of_replicas': blueprint.get('number_of_replicas', '0'),
-        'bind_host': blueprint.get('network_bind_host'),
-        'publish_host': blueprint.get('network_publish_host'),
-        'host': blueprint.get('network_host'),
-        'queue_size': blueprint.get('queue_size', 1000),
-    }
-    config = blueprint.upload('./elasticsearch.yml', '/etc/elasticsearch/', context)
+    with silent():
+        hostname = debian.hostname()
+
+    mlockall = blueprint.get('node.lock_memory', True)
+    cluster_nodes = blueprint.get('cluster.nodes', [])
+    cluster_size = len(cluster_nodes)
+
+    changes = []
 
     context = {
+        'cluster_name': blueprint.get('cluster.name', 'elasticsearch'),
+        'cluster_size': cluster_size,
+        'zen_multicast': yaml_boolean(blueprint.get('cluster.discovery', True)),
+        'zen_unicast_hosts': yaml.dump(cluster_nodes) if len(cluster_nodes) else None,
+        'node_name': blueprint.get('node.name', hostname),
+        'node_master': yaml_boolean(blueprint.get('node.master', True)),
+        'node_data': yaml_boolean(blueprint.get('node.data', True)),
+        'network_host': blueprint.get('node.bind', '_local_'),
+        'heap_size': blueprint.get('node.heap_size', '256m'),
+        'number_of_shards': blueprint.get('default_shards', '5'),
+        'number_of_replicas': blueprint.get('default_replicas', '0'),
+        'queue_size': blueprint.get('queue_size', '1000'),
         'log_level': blueprint.get('log_level', 'WARN'),
+        'memory_lock': yaml_boolean(mlockall),
+        'mlockall': mlockall
     }
-    logging = blueprint.upload('./logging.yml', '/etc/elasticsearch/', context)
 
-    context = {
-        'heap_size': blueprint.get('heap_size', '256m')
-    }
-    default = blueprint.upload('./default', '/etc/default/elasticsearch', context)
+    changes += blueprint.upload('./elasticsearch.yml', '/etc/elasticsearch/',
+                                context=context, user='elasticsearch')
+    changes += blueprint.upload('./logging.yml', '/etc/elasticsearch/',
+                                context=context, user='elasticsearch')
 
-    if config or logging or default:
+    changes += blueprint.upload('./default', '/etc/default/elasticsearch', context)
+
+    service_dir = "/etc/systemd/system/elasticsearch.service.d"
+
+    debian.mkdir(service_dir)
+    changes += blueprint.upload('./override.conf', service_dir + '/override.conf', context)
+
+    if changes:
         restart()
 
 
@@ -120,4 +157,4 @@ def install_plugin(name=None):
         abort('No plugin name given')
 
     with sudo():
-        run('/usr/share/elasticsearch/bin/plugin -install {}'.format(name))
+        run('/usr/share/elasticsearch/bin/plugin install {}'.format(name))

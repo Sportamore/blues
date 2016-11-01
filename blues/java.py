@@ -2,7 +2,7 @@
 Java
 ====
 
-Installs Java, currently restricted to version 7.
+Installs Oracle's Java JDK
 
 **Fabric environment:**
 
@@ -11,15 +11,23 @@ Installs Java, currently restricted to version 7.
     blueprints:
       - blues.java
 
+    settings:
+      java:
+        version: 9  # Major version of JDK to install (Default: 8)
+
 """
 from fabric.decorators import task
 
-from refabric.api import run, info
+from refabric.api import info
 from refabric.context_managers import sudo
+from refabric.contrib import blueprints
 
 from . import debian
 
 __all__ = ['setup']
+
+
+blueprint = blueprints.get(__name__)
 
 
 @task
@@ -34,13 +42,19 @@ def install():
     with sudo():
         lbs_release = debian.lbs_release()
 
-        if lbs_release == '12.04':
-            debian.add_apt_ppa('webupd8team/java')
-            debian.debconf_set_selections('shared/accepted-oracle-license-v1-1 select true',
-                                          'shared/accepted-oracle-license-v1-1 seen true')
-            package = 'oracle-java7-installer'
+        if lbs_release in ('14.04', '16.04'):
+            debian.add_apt_ppa('webupd8team/java', src=True)
+            debian.debconf_set_selections(
+                'shared/accepted-oracle-license-v1-1 select true',
+                'shared/accepted-oracle-license-v1-1 seen true'
+            )
+
+            version = blueprint.get('version', '8')
+            package = 'oracle-java{}-installer'.format(version)
+
         else:
+            info('Falling back to Java 7')
             package = 'java7-jdk'
 
-        info('Install Java 7 JDK')
+        info('Install Java JDK')
         debian.apt_get('install', package)
