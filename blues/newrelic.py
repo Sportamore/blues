@@ -11,8 +11,14 @@ NewRelic Server Blueprint
 
     settings:
       newrelic:
-        # newrelic_key: XXXXX
-
+        newrelic_key: XXXXX
+        plugins:
+          - elasticsearch
+          - nginx
+          - memcached
+          - redis
+          - rabbitmq
+          - uwsgi
 """
 from fabric.decorators import task
 from refabric.api import run, info
@@ -60,17 +66,32 @@ def install():
         info('Installing newrelic-sysmond')
         debian.apt_get('install', 'newrelic-sysmond')
 
+        if blueprint.get('plugins', None):
+            install_plugin()
+
+
+def install_plugin():
+    pass
+
 
 @task
 def configure():
     """
     Configure newrelic server
     """
+    enabled_plugins = blueprint.get('plugins', [])
 
     with sudo():
         info('Adding license key to config')
         newrelic_key = blueprint.get('newrelic_key', None)
         run('nrsysmond-config --set license_key={}'.format(newrelic_key))
+
+        if len(enabled_plugins):
+            context = {p: True for p in enabled_plugins}
+            context["newrelic_key"] = newrelic_key
+            blueprint.upload('newrelic-plugin-agent.cfg',
+                             '/etc/newrelic/newrelic-plugin-agent.cfg',
+                             context=context)
 
 
 def send_deploy_event(payload=None):
