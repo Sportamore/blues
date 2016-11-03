@@ -46,6 +46,7 @@ def setup():
     """
     install()
     configure()
+    start()
 
 
 def install():
@@ -103,7 +104,7 @@ def send_deploy_event(payload=None):
             changes = git.log_between_tags(path, old_tag, new_tag)
             deployer = git.get_local_commiter()
 
-            payload = json.dumps({ 
+            payload = json.dumps({
                 'deployment': {
                     'description': new_tag,
                     'revision': commit_hash,
