@@ -11,8 +11,14 @@ NewRelic Server Blueprint
 
     settings:
       newrelic:
-        # newrelic_key: XXXXX
-
+        newrelic_key: XXXXX
+        plugins:
+          - elasticsearch
+          - nginx
+          - memcached
+          - redis
+          - rabbitmq
+          - uwsgi
 """
 from fabric.decorators import task
 from refabric.api import run, info
@@ -22,8 +28,9 @@ from refabric.contrib import blueprints
 from .application.project import python_path
 
 
-from . import debian, git
+from . import debian, git, python
 
+from functools import partial
 import urllib2
 import urllib
 import json
@@ -34,9 +41,20 @@ __all__ = ['start', 'stop', 'restart', 'setup', 'configure']
 blueprint = blueprints.get(__name__)
 
 
-start = debian.service_task('newrelic-sysmond', 'start')
-stop = debian.service_task('newrelic-sysmond', 'stop')
-restart = debian.service_task('newrelic-sysmond', 'restart')
+def service(target=None, action=None):
+    debian.service('newrelic-sysmond', action, check_status=False)
+
+    if blueprint.get('plugins', None):
+        debian.service('newrelic-plugin-agent', action, check_status=False)
+
+
+start = task(partial(service, action='start'))
+stop = task(partial(service, action='stop'))
+restart = task(partial(service, action='restart'))
+
+start.__doc__ = 'Start newrelic agent'
+stop.__doc__ = 'Stop newrelic agent'
+restart.__doc__ = 'Restart newrelic agent'
 
 
 @task
@@ -46,6 +64,7 @@ def setup():
     """
     install()
     configure()
+    start()
 
 
 def install():
@@ -59,17 +78,38 @@ def install():
         info('Installing newrelic-sysmond')
         debian.apt_get('install', 'newrelic-sysmond')
 
+        debian.chmod('/var/log/newrelic', owner='newrelic')
+
+        if blueprint.get('plugins', None):
+            python.install()
+            python.pip('install', 'newrelic-plugin-agent')
+
+            if debian.lsb_release() == '16.04':
+                blueprint.upload('newrelic-plugin-agent.service',
+                                 '/etc/systemd/system/newrelic-plugin-agent.service')
+            else:
+                blueprint.upload('newrelic-plugin-agent.init',
+                                 '/etc/init.d/newrelic-plugin-agent')
+
 
 @task
 def configure():
     """
     Configure newrelic server
     """
+    enabled_plugins = blueprint.get('plugins', [])
 
     with sudo():
         info('Adding license key to config')
         newrelic_key = blueprint.get('newrelic_key', None)
         run('nrsysmond-config --set license_key={}'.format(newrelic_key))
+
+        if len(enabled_plugins):
+            context = {p: True for p in enabled_plugins}
+            context["newrelic_key"] = newrelic_key
+            blueprint.upload('newrelic-plugin-agent.cfg',
+                             '/etc/newrelic/newrelic-plugin-agent.cfg',
+                             context=context)
 
 
 def send_deploy_event(payload=None):
@@ -103,7 +143,7 @@ def send_deploy_event(payload=None):
             changes = git.log_between_tags(path, old_tag, new_tag)
             deployer = git.get_local_commiter()
 
-            payload = json.dumps({ 
+            payload = json.dumps({
                 'deployment': {
                     'description': new_tag,
                     'revision': commit_hash,
