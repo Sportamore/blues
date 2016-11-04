@@ -78,7 +78,7 @@ def install():
         info('Installing newrelic-sysmond')
         debian.apt_get('install', 'newrelic-sysmond')
 
-        debian.chmod('/var/log/newrelic', owner='newrelic')
+        debian.chmod('/var/log/newrelic', owner='newrelic', recursive=True)
 
         if blueprint.get('plugins', None):
             python.install()
@@ -90,6 +90,7 @@ def install():
             else:
                 blueprint.upload('newrelic-plugin-agent.init',
                                  '/etc/init.d/newrelic-plugin-agent')
+                debian.chmod('/etc/init.d/newrelic-plugin-agent', '755')
 
 
 @task
