@@ -28,8 +28,9 @@ from refabric.contrib import blueprints
 from .application.project import python_path
 
 
-from . import debian, git
+from . import debian, git, python
 
+from functools import partial
 import urllib2
 import urllib
 import json
@@ -40,9 +41,20 @@ __all__ = ['start', 'stop', 'restart', 'setup', 'configure']
 blueprint = blueprints.get(__name__)
 
 
-start = debian.service_task('newrelic-sysmond', 'start')
-stop = debian.service_task('newrelic-sysmond', 'stop')
-restart = debian.service_task('newrelic-sysmond', 'restart')
+def service(target=None, action=None):
+    debian.service('newrelic-sysmond', action, check_status=False)
+
+    if blueprint.get('plugins', None):
+        debian.service('newrelic-plugin-agent', action, check_status=False)
+
+
+start = task(partial(service, action='start'))
+stop = task(partial(service, action='stop'))
+restart = task(partial(service, action='restart'))
+
+start.__doc__ = 'Start newrelic agent'
+stop.__doc__ = 'Stop newrelic agent'
+restart.__doc__ = 'Restart newrelic agent'
 
 
 @task
@@ -66,12 +78,18 @@ def install():
         info('Installing newrelic-sysmond')
         debian.apt_get('install', 'newrelic-sysmond')
 
+        debian.chmod('/var/log/newrelic', owner='newrelic')
+
         if blueprint.get('plugins', None):
-            install_plugin()
+            python.install()
+            python.pip('install', 'newrelic-plugin-agent')
 
-
-def install_plugin():
-    pass
+            if debian.lsb_release() == '16.04':
+                blueprint.upload('newrelic-plugin-agent.service',
+                                 '/etc/systemd/system/newrelic-plugin-agent.service')
+            else:
+                blueprint.upload('newrelic-plugin-agent.init',
+                                 '/etc/init.d/newrelic-plugin-agent')
 
 
 @task
