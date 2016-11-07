@@ -1,5 +1,5 @@
 # you can override this using by setting a system property, for example -Des.logger.level=DEBUG
-es.logger.level: {{ log_level|default('WARN') }}
+es.logger.level: {{ log_level }}
 rootLogger: ${es.logger.level}, console, file
 logger:
   # log action execution errors for easier debugging
@@ -36,7 +36,6 @@ appender:
     maxFileSize: 50MB
     maxBackupIndex: 1
     file: ${path.logs}/${cluster.name}.log
-    datePattern: "'.'yyyy-MM-dd"
     layout:
       type: pattern
       conversionPattern: "[%d{ISO8601}][%-5p][%-25c] %m%n"
@@ -46,7 +45,6 @@ appender:
     maxFileSize: 50MB
     maxBackupIndex: 1
     file: ${path.logs}/${cluster.name}_index_search_slowlog.log
-    datePattern: "'.'yyyy-MM-dd"
     layout:
       type: pattern
       conversionPattern: "[%d{ISO8601}][%-5p][%-25c] %m%n"
@@ -56,7 +54,6 @@ appender:
     maxFileSize: 50MB
     maxBackupIndex: 1
     file: ${path.logs}/${cluster.name}_index_indexing_slowlog.log
-    datePattern: "'.'yyyy-MM-dd"
     layout:
       type: pattern
       conversionPattern: "[%d{ISO8601}][%-5p][%-25c] %m%n"

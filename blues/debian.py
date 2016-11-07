@@ -58,7 +58,8 @@ def mv(source, destination, force=True):
     run('mv %s %s %s' % (force, source, destination))
 
 
-def ln(source, destination, symbolic=True, force=True, mode=None, owner=None, group=None):
+def ln(source, destination, symbolic=True, force=True, mode=None,
+       owner=None, group=None):
     force = force and '-f' or ''
     symbolic = symbolic and '-sn' or ''
     run('ln %s %s "%s" "%s"' % (symbolic, force, source, destination))
@@ -67,15 +68,18 @@ def ln(source, destination, symbolic=True, force=True, mode=None, owner=None, gr
 
 def mkdir(location, recursive=True, mode=None, owner=None, group=None):
     with silent(), sudo():
-        result = run('test -d "%s" || mkdir %s %s "%s"' % (location,
-                                                           mode and '-m %s' % mode or '',
-                                                           recursive and '-p' or '',
-                                                           location))
+        result = run('test -d "%s" || mkdir %s %s "%s"'
+                     % (location,
+                        mode and '-m %s' % mode or '',
+                        recursive and '-p' or '',
+                        location))
+
         if result.succeeded:
             if owner or group:
                 chmod(location, owner=owner, group=group)
         else:
-            raise Exception('Failed to create directory %s, %s' % (location, result.stdout))
+            raise Exception('Failed to create directory %s, %s'
+                            % (location, result.stdout))
 
 
 def mktemp(directory=False, mode=None):
@@ -101,12 +105,14 @@ def temporary_dir(mode=None):
         rm(path, recursive=True)
 
 
-def lbs_release():
+def lsb_release():
     return run('lsb_release --release --short')
+lbs_release = lsb_release  # Backwards compatibility
 
 
-def lbs_codename():
+def lsb_codename():
     return run('lsb_release --codename --short')
+lbs_codename = lsb_codename  # Backwards compatibility
 
 
 def hostname():
@@ -115,7 +121,14 @@ def hostname():
 
 def apt_get(command, *options):
     options = ' '.join(options) if options else ''
+
     return run('apt-get --yes {} {}'.format(command, options))
+
+
+def apt_get_update(quiet=True):
+    options = '-q' if quiet else ''
+    info('Updating apt package lists')
+    return run('apt-get {} update'.format(options))
 
 
 def debconf_set_selections(*selections):
@@ -134,12 +147,14 @@ def dpkg_query(package):
 
 def add_apt_repository(repository, accept=True, src=False):
     if src:
-        run('add-apt-repository "{}" {}'.format(repository, '--yes' if accept else ''))
+        run('add-apt-repository "{}" {}'.format(repository,
+                                                '--yes' if accept else ''))
     else:
         # Add repository manually to sources.list due to ubuntu bug
         if not repository.startswith('deb '):
             repository = 'deb {}'.format(repository)
-        fabric.contrib.files.append('/etc/apt/sources.list', repository, shell=True)
+        fabric.contrib.files.append('/etc/apt/sources.list', repository,
+                                    shell=True)
 
 
 def add_apt_key(url):
@@ -152,18 +167,23 @@ def add_apt_ppa(name, accept=True, src=False):
 
         if not fabric.contrib.files.exists(source_list):
             add_apt_repository('ppa:{}'.format(name), accept=accept, src=src)
-            apt_get('update')
+            apt_get_update()
 
 
 def command_exists(*command):
     with fabric.context_managers.quiet():
-        return all((run("which '%s' >& /dev/null" % c).succeeded for c in command))
+        return all((
+            run("which '%s' >& /dev/null" % c).succeeded
+            for c in command
+        ))
 
 
 def get_user(name):
     with silent():
         d = run("cat /etc/passwd | egrep '^%s:' ; true" % name, user='root')
-        s = run("cat /etc/shadow | egrep '^%s:' | awk -F':' '{print $2}'" % name, user='root')
+        s = run("cat /etc/shadow | egrep '^%s:' | awk -F':' '{print $2}'"
+                % name,
+                user='root')
 
     results = {}
     if d:
@@ -315,7 +335,7 @@ def pwd():
         return run('pwd').stdout.strip()
 
 
-def service(name, action, check_status=True):
+def service(name, action, check_status=True, show_output=False):
     c = fabric.context_managers
     with sudo('root'), c.settings(c.hide('running', 'stdout', 'stderr', 'warnings'), warn_only=True):
         info('Service: {} {}', name, action)
@@ -330,12 +350,12 @@ def service(name, action, check_status=True):
                 return
 
         output = run('service {} {}'.format(name, action), pty=False, combine_stderr=True)
-        if output.return_code != 0:
+        if output.return_code != 0 or show_output:
             puts(indent(magenta(output)))
 
 
-def service_task(name, action, check_status=False):
-    partial_service = partial(service, name, action, check_status)
+def service_task(name, action, check_status=False, show_output=False):
+    partial_service = partial(service, name, action, check_status, show_output)
     pretty_action = action.replace('-', ' ').capitalize()
     partial_service.__doc__ = '{} {}'.format(pretty_action, name)
     return task(partial_service)
@@ -347,12 +367,25 @@ def update_rc(basename, priorities, force=False):
                                       priorities), pty=False, use_sudo=True)
 
 
+def systemd_service(name, action='is-enabled'):
+    name = name if name.endswith('.service') else '{}.service'.format(name)
+    run('systemctl {} {}'.format(action, name), pty=False, use_sudo=True)
+
+
 def add_rc_service(name, priorities='defaults'):
-    update_rc(name, priorities)
+    if lsb_release() == '16.04':
+        systemd_service(name, 'enable')
+
+    else:
+        update_rc(name, priorities)
 
 
 def remove_rc_service(name):
-    update_rc(name, priorities='remove', force=True)
+    if lsb_release() == '16.04':
+        systemd_service(name, 'disable')
+
+    else:
+        update_rc(name, priorities='remove', force=True)
 
 
 def nproc():
