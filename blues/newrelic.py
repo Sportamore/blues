@@ -126,12 +126,12 @@ def send_deploy_event(payload=None):
     :param payload: payload is a json dict with newrelic api info
     :return:
     """
-    newrelic_key = blueprint.get('newrelic_key', None)
+    newrelic_key = blueprint.get('newrelic_event_key', None)
     app_id = blueprint.get('app_id', None)
 
-
     if all([newrelic_key, app_id]):
-        url = 'https://api.newrelic.com/v2/applications/{}/deployments.json'.format(app_id)
+        url = 'https://api.newrelic.com/v2/applications/{}/deployments.json' \
+              ''.format(app_id)
         headers = {
             'x-api-key': newrelic_key,
             'Content-Type': 'application/json'
@@ -157,6 +157,6 @@ def send_deploy_event(payload=None):
         urllib2.urlopen(request, data=payload)
         info('Deploy event sent')
     else:
-        for i in ['app_id', 'newrelic_key']:
+        for i in ['app_id', 'newrelic_event_key']:
              if not locals().get(i, None):
                  info('missing key: {}'.format(i))
