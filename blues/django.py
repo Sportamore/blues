@@ -23,19 +23,19 @@ from fabric.context_managers import cd
 from fabric.decorators import task, runs_once
 from fabric.operations import prompt
 from fabric.state import env
+from fabric.utils import warn
 
 from refabric.api import run, info
-from refabric.context_managers import hide_prefix
+from refabric.context_managers import hide_prefix, silent
 from refabric.contrib import blueprints
 
 from . import virtualenv
 from .application.project import virtualenv_path, python_path, sudo_project
 
-__all__ = ['manage', 'deploy', 'version', 'migrate', 'collectstatic', 'syncdb']
+__all__ = ['manage', 'deploy', 'version', 'showmigrations', 'migrate', 'collectstatic', 'syncdb']
 
 
 blueprint = blueprints.get(__name__)
-
 
 @task
 def manage(cmd=''):
@@ -70,6 +70,30 @@ def version():
         v = re.split('[a-z]', v.split('\n')[-1])[0]
         version.version = tuple(map(int, v.split('\n')[0].strip().split('.')))
     return version.version
+
+
+@task
+@runs_once
+def showmigrations(show_all=False):
+    """
+    Show unapplied (or all) migrations.
+    """
+    from blues import django
+    with silent():
+        migrations = django.manage('showmigrations -p').split('\n')
+
+    if not show_all:
+        migrations = [m for m in migrations if m.startswith('[ ]')]
+        if len(migrations):
+            warn("There are {} unapplied migrations".format(len(migrations)))
+        else:
+            info("There are no unapplied migrations")
+
+    for migration in migrations:
+        if migration.startswith('[X]'):
+            info(migration)
+        else:
+            warn(migration)
 
 
 @task
