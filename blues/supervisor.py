@@ -28,10 +28,10 @@ import os
 from fabric.context_managers import cd
 from fabric.contrib import files
 from fabric.decorators import task
-from fabric.utils import warn
+from fabric.utils import puts, warn
 
 from refabric.api import run, info
-from refabric.context_managers import sudo, silent, hide_prefix
+from refabric.context_managers import sudo, silent
 from refabric.contrib import blueprints
 
 from . import debian
@@ -189,6 +189,28 @@ def supervisorctl(command, program=''):
         return run('supervisorctl {} {}'.format(command, program or ''))
 
 
+def service(command, program=None):
+    if not program:
+        debian.service('supervisor', command)
+    else:
+        supervisorctl(command, program)
+
+
+@task
+def reload(program=None):
+    """
+    Reload supervisor or restart programs
+
+    :param program: The program to start (all|exact|pattern). If not given,
+        the supervisor service will reload.
+    """
+    if not program:
+        service('reload')
+
+    else:
+        service('restart', program=program)
+
+
 @task
 def ctl(command, program=''):
     """
@@ -198,9 +220,10 @@ def ctl(command, program=''):
     :param program: The program to run command against
     """
     with silent():
+        puts('supervisorctl {} {}'.format(command, program))
         output = supervisorctl(command, program=program)
-        with hide_prefix():
-            info(output)
+        for line in output.split('\n'):
+            info(line)
 
 
 @task
@@ -213,48 +236,10 @@ def status(program=''):
     ctl('status', program=program)
 
 
-def service(command, program=None):
-    if not program:
-        debian.service('supervisor', command)
-    else:
-        ctl(command, program)
-
-
 start = task(partial(service, 'start'))
 stop = task(partial(service, 'stop'))
 restart = task(partial(service, 'restart'))
 
 start.__doc__ = 'Start supervisor or start program(s)'
 stop.__doc__ = 'Stop supervisor or stop program(s)'
-restart.__doc__ = 'Restart supervisor or restart program(s)'
-
-
-@task
-def reload(program=None):
-    """
-    Reload supervisor or reload program(s), via SIGHUP
-
-    :param program: The program to reload (all|exact|pattern). If not given,
-        the supervisor service will reload.
-    """
-    if not program:
-        service('reload')
-    else:
-        with silent():
-            if program == 'all':
-                program = ''
-
-            output = supervisorctl('status', program=program)
-
-            if output.return_code == 0:
-                pids = [line.split()[3][:-1]
-                        for line in output.stdout.split('\n')]
-
-                program_count = len(pids)
-
-                if program_count > 1:
-                    info('Reloading {} supervisor programs', program_count)
-                else:
-                    info('Reloading {} supervisor program', program or 'all')
-                for pid in pids:
-                    debian.sighup(pid)
+restart.__doc__ = 'Stop supervisor or restart program(s)'

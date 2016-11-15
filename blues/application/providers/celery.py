@@ -34,27 +34,42 @@ class CeleryProvider(ManagedProvider):
         return context
 
     def reload(self):
-        for program in self.get_programs():
-            name, _, _ = program.partition('.')
-            self.manager.reload(name)
+        self.manager.reload('celery_worker:*')
+        for extension in self.get_extensions():
+            self.manager.reload(extension)
+
+    def start(self):
+        self.manager.start('celery_worker:*')
+        for extension in self.get_extensions():
+            self.manager.start(extension)
+
+    def stop(self):
+        self.manager.stop('celery_worker:*')
+        for extension in self.get_extensions():
+            self.manager.stop(extension)
+
+    def status(self):
+        self.manager.status('celery_worker:*')
+        for extension in self.get_extensions():
+            self.manager.status(extension)
 
     @staticmethod
-    def get_programs():
+    def get_extensions():
         # Filter program extensions by host
-        programs = ['celery.conf']
-        extensions = blueprint.get('worker.celery.extensions')
+        enabled_extensions = []
 
+        extensions = blueprint.get('worker.celery.extensions')
         if isinstance(extensions, list):
             # Filter or bad values
             extensions = [extension for extension in extensions if extension]
             for extension in extensions:
-                programs.append('{}.conf'.format(extension))
+                enabled_extensions.append(extension)
         elif isinstance(extensions, dict):
             for extension, extension_host in extensions.items():
                 if extension_host in ('*', env.host_string):
-                    programs.append('{}.conf'.format(extension))
+                    enabled_extensions.append(extension)
 
-        return programs
+        return enabled_extensions
 
     def configure_worker(self):
         """
@@ -67,7 +82,11 @@ class CeleryProvider(ManagedProvider):
     def configure(self):
         context = self.get_context()
 
-        for program in self.get_programs():
+        programs = ['celery.conf']
+        programs.extend(['{}.conf'.format(name)
+                         for name in self.get_extensions()])
+
+        for program in programs:
             template = os.path.join('supervisor', 'default', program)
             if not hasattr(self.manager, '_upload_provider_template'):
                 raise Exception('the celery provider only works with the '

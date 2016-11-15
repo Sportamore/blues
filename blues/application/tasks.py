@@ -149,6 +149,16 @@ def reload():
 
 
 @task
+def status():
+    """
+    get status from all application providers on current host
+    """
+    providers = get_providers(env.host_string)
+    for provider in set(providers.values()):
+        provider.status()
+
+
+@task
 def configure_providers(force_reload=False):
     """
     Render, upload and reload web & worker config

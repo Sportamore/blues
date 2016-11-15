@@ -72,3 +72,12 @@ class SupervisorManager(BaseManager):
 
     def reload(self, program=None):
         supervisor.reload(program)
+
+    def start(self, program=None):
+        supervisor.start(program)
+
+    def stop(self, program=None):
+        supervisor.stop(program)
+
+    def status(self, program=None):
+        supervisor.status(program)
