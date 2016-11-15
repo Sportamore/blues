@@ -217,3 +217,7 @@ class UWSGIProvider(ManagedProvider):
         for vassal_ini in vassals or self.list_vassals():
             vassal_ini_path = os.path.join(self.get_config_path(), vassal_ini)
             uwsgi.reload(vassal_ini_path)
+
+    def status(self):
+        from blues import uwsgi
+        uwsgi.status()

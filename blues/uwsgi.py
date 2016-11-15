@@ -123,9 +123,17 @@ def reload(vassal_path=None):
         debian.service('uwsgi', 'reload', check_status=False)
     else:
         vassal_name = os.path.splitext(os.path.basename(vassal_path))[0]
-        with sudo(), silent():
+        with sudo():
             info('Reloading {} uWSGI vassal', vassal_name)
             run('touch {}'.format(vassal_path))
+
+
+@task
+def status():
+    """
+    TODO: Replace this with some kind of parsed output from stats socket.
+    """
+    debian.service('uwsgi', 'status', show_output=True)
 
 
 def get_worker_count(cores):

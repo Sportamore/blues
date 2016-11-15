@@ -204,6 +204,7 @@ def reload(program=None):
     :param program: The program to start (all|exact|pattern). If not given,
         the supervisor service will reload.
     """
+    info('Reloading {}', program or 'supervisord')
     if not program:
         service('reload')
 
