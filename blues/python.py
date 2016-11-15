@@ -99,10 +99,14 @@ def pip(command, *options, **kwargs):
     bin = kwargs.pop('bin',
                      'pip3' if requested_version() >= (3,)
                      else 'pip')
-    cmd = '{pip} {command} {options} -v --log={log_file} --log-file={log_file}'
+    quiet = kwargs.pop('quiet', False)
+    cmd = '{pip} {command} {options} {verbosity} --log={log_file} --log-file={log_file}'
 
-    run(cmd.format(pip=bin, command=command,
-                   options=' '.join(options), log_file=pip_log_file))
+    run(cmd.format(pip=bin,
+                   command=command,
+                   options=' '.join(options),
+                   verbosity='-v' if not quiet else '-q',
+                   log_file=pip_log_file), pty=False)
 
 
 @task

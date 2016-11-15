@@ -307,7 +307,7 @@ def install_requirements(installation_file=None, update_pip=False):
             if installation_method == 'pip':
                 if update_pip:
                     python.update_pip()
-                python.pip('install', '-qUr', installation_file)
+                python.pip('install', '--upgrade', '-r', installation_file, quiet=True)
             elif installation_method == 'setuptools':
                 with cd(git_repository_path()):
                     run('python {} develop'.format(installation_file))
