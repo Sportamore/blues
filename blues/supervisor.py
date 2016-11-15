@@ -28,10 +28,10 @@ import os
 from fabric.context_managers import cd
 from fabric.contrib import files
 from fabric.decorators import task
-from fabric.utils import warn
+from fabric.utils import puts, warn
 
 from refabric.api import run, info
-from refabric.context_managers import sudo, silent, hide_prefix
+from refabric.context_managers import sudo, silent
 from refabric.contrib import blueprints
 
 from . import debian
@@ -220,9 +220,10 @@ def ctl(command, program=''):
     :param program: The program to run command against
     """
     with silent():
+        puts('supervisorctl {} {}'.format(command, program))
         output = supervisorctl(command, program=program)
-        with hide_prefix():
-            info(output)
+        for line in output.split('\n'):
+            info(line)
 
 
 @task
