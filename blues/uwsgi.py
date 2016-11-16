@@ -19,6 +19,7 @@ Currently only acts as a provider for the application blueprint and can not be u
 
 """
 import os
+import json
 
 from fabric.decorators import task
 
@@ -129,11 +130,15 @@ def reload(vassal_path=None):
 
 
 @task
-def status():
+def status(vassal_name=None):
     """
     TODO: Replace this with some kind of parsed output from stats socket.
     """
-    debian.service('uwsgi', 'status', show_output=True)
+    with sudo(), hide_prefix():
+        vassal = vassal_name or blueprint.get('project')
+        stats_path = os.path.join(tmpfs_path, '{}-stats.sock'.format(vassal))
+        stats = run('uwsgi --connect-and-read {}'.format(stats_path))
+        info(repr(json.loads(stats)))
 
 
 def get_worker_count(cores):
