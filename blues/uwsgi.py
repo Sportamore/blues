@@ -20,6 +20,7 @@ Currently only acts as a provider for the application blueprint and can not be u
 """
 import os
 import json
+from datetime import timedelta
 
 from fabric.decorators import task
 
@@ -30,7 +31,7 @@ from refabric.contrib import blueprints
 from . import debian
 from . import python
 
-__all__ = ['start', 'stop', 'restart', 'reload', 'setup', 'configure', 'top', 'fifo']
+__all__ = ['start', 'stop', 'restart', 'reload', 'status', 'setup', 'configure', 'top', 'fifo']
 
 
 blueprint = blueprints.get(__name__)
@@ -132,13 +133,21 @@ def reload(vassal_path=None):
 @task
 def status(vassal_name=None):
     """
-    TODO: Replace this with some kind of parsed output from stats socket.
+    Get basic stats from UWSGI
     """
     with sudo(), hide_prefix():
         vassal = vassal_name or blueprint.get('project')
         stats_path = os.path.join(tmpfs_path, '{}-stats.sock'.format(vassal))
-        stats = run('uwsgi --connect-and-read {}'.format(stats_path))
-        info(repr(json.loads(stats)))
+        try:
+            stats = json.loads(run('uwsgi --connect-and-read {}'.format(stats_path)))
+            for worker_stats in stats['workers']:
+                info('Worker {}, status: {}, uptime: {!s}'.format(
+                    worker_stats['pid'],
+                    worker_stats['status'],
+                    datetime(seconds=worker_stats['running_time'])))
+
+        except Exception:
+            warn('Unable to read UWSGI stats')
 
 
 def get_worker_count(cores):
