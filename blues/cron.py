@@ -16,6 +16,7 @@ Templates are handled as crontabs and should be named after related user.
 import os
 
 from fabric.decorators import task
+from fabric.utils import abort
 
 from refabric.context_managers import sudo, silent
 from refabric.contrib import blueprints
@@ -42,3 +43,15 @@ def configure():
                 user = os.path.basename(update)
                 info('Installing new crontab for {}...', user)
                 run('crontab -u {} {}'.format(user, os.path.join(temp_dir, user)))
+
+@task
+def clear(user=None):
+    """
+    Removes the crontab for a single user
+    """
+    if not user:
+        abort('Please specify user account')
+
+    with sudo():
+        info('Disabling crontab for {}...', user)
+        run('crontab -r -u {}'.format(user))
