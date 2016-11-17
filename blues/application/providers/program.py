@@ -1,5 +1,6 @@
 from refabric.contrib import blueprints
 from .base import ManagedProvider
+from refabric.api import run, info
 
 blueprint = blueprints.get('blues.app')
 
@@ -10,6 +11,15 @@ class ProgramProvider(ManagedProvider):
 
     def install(self):
         pass
+
+    def start(self):
+        self.manager.start(self.project)
+
+    def stop(self):
+        self.manager.stop(self.project)
+
+    def status(self, name=None):
+        self.manager.status(name or self.project)
 
     def reload(self):
         self.manager.reload(self.project)
