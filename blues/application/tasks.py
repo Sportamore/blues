@@ -155,7 +155,6 @@ def status():
     """
     providers = get_providers(env.host_string)
     for provider in set(providers.values()):
-        info("prov: {!r}, proj: {!r}".format(provider, blueprint.get('project')))
         provider.status(blueprint.get('project'))
 
 
