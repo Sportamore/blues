@@ -1,6 +1,5 @@
 from refabric.contrib import blueprints
 from .base import ManagedProvider
-from refabric.api import run, info
 
 blueprint = blueprints.get('blues.app')
 
@@ -24,13 +23,21 @@ class ProgramProvider(ManagedProvider):
     def reload(self):
         self.manager.reload(self.project)
 
+    def get_context(self, role='worker'):
+        context = super(ProgramProvider, self).get_context()
+        context.update({
+            'executable': blueprint.get('{}.executable'.format(role)),
+        })
+
+        return context
+
     def configure_web(self):
-        return self.configure()
+        return self.configure(role='web')
 
     def configure_worker(self):
-        return self.configure()
+        return self.configure(role='worker')
 
-    def configure(self):
+    def configure(self, role='worker'):
         return self.manager.configure_provider(self,
-                                               self.get_context(),
+                                               self.get_context(role),
                                                program_name=self.project)
