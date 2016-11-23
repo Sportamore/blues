@@ -16,11 +16,12 @@ from fabric.utils import abort
 from refabric.api import run, info
 from refabric.context_managers import sudo
 from refabric.contrib import blueprints
+from fabric.operations import prompt
 
 from . import debian
 
 __all__ = ['start', 'stop', 'restart', 'reload', 'setup', 'configure', 'ctl',
-           'reset']
+           'reset', 'useradd']
 
 
 blueprint = blueprints.get(__name__)
@@ -93,6 +94,21 @@ def configure():
                    or [])
     if uploads:
         restart()
+
+
+@task
+def useradd():
+    """
+    Add a basic (R/W/A) user account on the default vhost.
+    """
+    username = prompt('Username:')
+    password = prompt('Password:')
+
+    if not username or not password:
+        abort('Both username and password are required.')
+
+    ctl("add_user '{}' '{}'".format(username, password))
+    ctl("set_permissions '{}' '.*' '.*' '.*'".format(username))
 
 
 @task
