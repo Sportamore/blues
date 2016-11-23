@@ -155,7 +155,7 @@ def status():
     """
     providers = get_providers(env.host_string)
     for provider in set(providers.values()):
-        provider.status()
+        provider.status(blueprint.get('project'))
 
 
 @task

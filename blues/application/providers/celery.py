@@ -48,7 +48,7 @@ class CeleryProvider(ManagedProvider):
         for extension in self.get_extensions():
             self.manager.stop(extension)
 
-    def status(self):
+    def status(self, project=None):
         self.manager.status('celery_worker:*')
         for extension in self.get_extensions():
             self.manager.status(extension)

@@ -19,8 +19,11 @@ Currently only acts as a provider for the application blueprint and can not be u
 
 """
 import os
+import json
+from datetime import datetime
 
 from fabric.decorators import task
+from fabric.utils import warn
 
 from refabric.api import run, info
 from refabric.context_managers import sudo, hide_prefix, silent
@@ -29,7 +32,7 @@ from refabric.contrib import blueprints
 from . import debian
 from . import python
 
-__all__ = ['start', 'stop', 'restart', 'reload', 'setup', 'configure', 'top', 'fifo']
+__all__ = ['start', 'stop', 'restart', 'reload', 'status', 'setup', 'configure', 'top', 'fifo']
 
 
 blueprint = blueprints.get(__name__)
@@ -129,11 +132,25 @@ def reload(vassal_path=None):
 
 
 @task
-def status():
+def status(vassal_name=None):
     """
-    TODO: Replace this with some kind of parsed output from stats socket.
+    Get basic stats from UWSGI
     """
-    debian.service('uwsgi', 'status', show_output=True)
+    with sudo(), silent():
+        vassal = vassal_name or blueprint.get('project')
+        stats_path = os.path.join(tmpfs_path, '{}-stats.sock'.format(vassal))
+        try:
+            stats = json.loads(run('uwsgi --connect-and-read {}'.format(stats_path)))
+            for worker_stats in stats['workers']:
+                start_time = datetime.fromtimestamp(worker_stats['last_spawn'])
+                uptime = datetime.now().replace(microsecond=0) - start_time
+                info('Worker {}, status: {}, uptime: {!s}'.format(
+                    worker_stats['pid'],
+                    worker_stats['status'],
+                    uptime))
+
+        except Exception:
+            warn('Unable to read UWSGI stats')
 
 
 def get_worker_count(cores):
