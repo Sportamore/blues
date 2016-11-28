@@ -261,16 +261,24 @@ def configure_filebeat():
             ]
         }
 
+    prospectors = []
+    for doc_type, cfg in blueprint.get('forwarder.files', {}).items():
+        prospector = {'document_type': doc_type}
+
+        if isinstance(cfg, dict):
+            prospector.update(cfg)
+
+        elif isinstance(cfg, list):
+            prospector['paths'] = cfg
+
+        else:
+            continue
+
+        prospectors.append(prospector)
+
     filebeat_cfg = {
         'filebeat': {
-            'prospectors': [
-                {
-                    'paths': paths,
-                    'document_type': doc_type
-                }
-                for doc_type, paths
-                in blueprint.get('forwarder.files', {}).items()
-            ]
+            'prospectors': prospectors
         }
     }
 
