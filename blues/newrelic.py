@@ -146,7 +146,7 @@ def send_deploy_event(payload=None):
 
         if not payload:
             path = python_path()
-            commit_hash = git.get_commit(path)
+            commit_hash = git.get_commit(path, short=True)
             new_tag, old_tag = git.get_two_most_recent_tags(path)
             changes = git.log_between_tags(path, old_tag, new_tag)
             deployer = git.get_local_commiter()

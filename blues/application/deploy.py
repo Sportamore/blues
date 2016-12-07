@@ -351,29 +351,27 @@ def install_source():
     return cloned
 
 
-def update_source():
+def update_source(revision=None):
     """
-    Update application repository with configured branch.
+    Update application repository to the specified revision.
 
     :return: tuple(previous commit, current commit)
     """
-    from .project import sudo_project, git_repository_path, git_repository
+    from .project import sudo_project, git_repository_path, remote_head
+
+    if not revision:
+        branch, revision = remote_head()
+        warn('No revision specified, assuming {} (from: {})'.format(revision, branch))
 
     with sudo_project():
         # Get current commit
-        path = git_repository_path()
-        previous_commit = git.get_commit(path, short=True)
+        repository_path = git_repository_path()
+        previous_commit = git.get_commit(repository_path, short=True)
 
         # Update source from git (reset)
-        repository = git_repository()
-        current_commit = git.reset(repository['branch'],
-                                   repository_path=path,
+        current_commit = git.reset(repository_path=repository_path,
+                                   revision=revision,
                                    ignore=blueprint.get('git_force_ignore'))
-
-        if current_commit is not None and current_commit != previous_commit:
-            info(indent('(new version)'))
-        else:
-            info(indent('(same commit)'))
 
         return previous_commit, current_commit
 

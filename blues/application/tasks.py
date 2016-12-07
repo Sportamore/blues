@@ -1,6 +1,7 @@
 # coding=utf-8
 
 import os
+import re
 
 from fabric.context_managers import settings
 from fabric.decorators import task
@@ -54,7 +55,7 @@ def configure():
 
 
 @task
-def deploy(auto_reload=True, force=False, update_pip=False):
+def deploy(revision=None, auto_reload=True, force=False, update_pip=False):
     """
     Reset source to configured branch and install requirements, if needed
 
@@ -66,9 +67,14 @@ def deploy(auto_reload=True, force=False, update_pip=False):
     from .project import use_virtualenv
 
     # Reset git repo
-    previous_commit, current_commit = update_source()
-    code_changed = current_commit is not None and \
-                   previous_commit != current_commit
+    previous_commit, current_commit = update_source(revision)
+    code_changed = current_commit is not None and previous_commit != current_commit
+
+    if code_changed:
+        info('Updated git repository from: {} to: {}', previous_commit, current_commit)
+
+    else:
+        info('Reset git repository to: {}', current_commit)
 
     if code_changed or force:
         # Install python dependencies
@@ -105,15 +111,19 @@ def deployed():
         repository_path = git_repository_path()
         git.fetch(repository_path)
 
-        head_commit, head_message = git.log(repository_path)[0]
-        origin_commit, origin_message = git.log(repository_path,
-                                                commit='origin')[0]
-
-        info('Deployed commit: {} - {}', head_commit[:7], head_message)
-        if head_commit == origin_commit:
-            info(indent('(up-to-date with origin)'))
+        head_tag, head_tag_delta = git.current_tag(repository_path)
+        if head_tag_delta > 0:
+            info("Latest tag: {} distance: {}", head_tag, head_tag_delta)
         else:
-            info('Pending release: {} - {}', origin_commit[:7], origin_message)
+            info("Deployed tag: {}", head_tag)
+
+        head_commit, head_message = git.log(repository_path)[0]
+        info('Deployed commit: {} comment: {}', head_commit, head_message)
+
+        origin = git.get_origin(repository_path)
+        origin_commit, origin_message = git.log(repository_path, refspec=origin)[0]
+        if head_commit != origin_commit:
+            info('Pending commit: {} comment: {}', origin_commit, origin_message)
 
         return head_commit, origin_commit
 
