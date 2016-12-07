@@ -259,6 +259,13 @@ def get_github_owner():
     return parse_url(url)['gh_owner']
 
 
+def get_latest_release():
+    from .project import latest_release
+
+    info('Locating the latest release')
+    return latest_release()
+
+
 def notify_deploy_start(role=None, notifier=slack.notify, quiet=False):
     from .project import project_name
 
