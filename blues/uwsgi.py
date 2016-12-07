@@ -23,7 +23,7 @@ import json
 from datetime import datetime
 
 from fabric.decorators import task
-from fabric.utils import warn
+from fabric.utils import puts, warn
 
 from refabric.api import run, info
 from refabric.context_managers import sudo, hide_prefix, silent
@@ -140,14 +140,15 @@ def status(vassal_name=None):
         vassal = vassal_name or blueprint.get('project')
         stats_path = os.path.join(tmpfs_path, '{}-stats.sock'.format(vassal))
         try:
+            puts('Reading from {}'.format(stats_path))
             stats = json.loads(run('uwsgi --connect-and-read {}'.format(stats_path)))
             for worker_stats in stats['workers']:
                 start_time = datetime.fromtimestamp(worker_stats['last_spawn'])
                 uptime = datetime.now().replace(microsecond=0) - start_time
-                info('Worker {}, status: {}, uptime: {!s}'.format(
-                    worker_stats['pid'],
-                    worker_stats['status'],
-                    uptime))
+                info('Worker {} status: {} uptime: {!s}',
+                     worker_stats['pid'],
+                     worker_stats['status'],
+                     uptime)
 
         except Exception:
             warn('Unable to read UWSGI stats')
