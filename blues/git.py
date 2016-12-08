@@ -102,7 +102,14 @@ def fetch(repository_path=None):
         run('git fetch origin', pty=False)
 
 
-def lsremote(repo_url, reftype="branches"):
+def lsremote(repo_url, reftype='branches'):
+    """
+    Get references from a remote repository.
+    :param reftype: the reference types to return: 'branches' or 'tags'
+
+    :return dict: {reference: revision, ...}
+    """
+
     prefixes = {
         'branches': 'refs/heads/',
         'tags': 'refs/tags/'
@@ -121,6 +128,11 @@ def lsremote(repo_url, reftype="branches"):
 
 
 def show_file(repository_path, filename, revision='HEAD'):
+    """
+    Get the contents of a file from a specific revision
+
+    :return str: file contents
+    """
     with cd(repository_path), silent():
         # pipe through cat to get rid of any ANSI codes
         output = run('git show {revision}:{filename} | cat'.format(
@@ -135,7 +147,7 @@ def reset(revision, repository_path=None, **kwargs):
     """
     Fetch, reset, clean and checkout revision.
 
-    :return: commit short hash or None
+    :return str: commit short hash
     """
     if not repository_path:
         repository_path = debian.pwd()
@@ -176,7 +188,7 @@ def get_commit(repository_path=None, short=False):
 
     :param repository_path: Repository path
     :param short: Format git commit hash in short (7) format
-    :return: Commit hash
+    :return str: Commit hash
     """
     if not repository_path:
         repository_path = debian.pwd()
@@ -192,6 +204,11 @@ def get_commit(repository_path=None, short=False):
 
 
 def get_local_commiter():
+    """
+    Retrieves the calling user's git name
+
+    :return str: username
+    """
     return local('git config user.name', capture=True)
 
 
@@ -202,7 +219,7 @@ def diff_stat(repository_path=None, commit='HEAD^', path=None):
     :param repository_path: Repository path
     :param commit: Commit to diff against, ex 12345..67890
     :param path: Path or file to diff
-    :return: tuple(num files changed, num insertions, num deletions)
+    :return tuple: int(files changed), int(insertions), int(deletions)
     """
     if not repository_path:
         repository_path = debian.pwd()
@@ -234,6 +251,11 @@ def diff_stat(repository_path=None, commit='HEAD^', path=None):
 
 
 def get_origin(repository_path):
+    """
+    Get the name of the remote (tracking) branch
+
+    :return str: refspec
+    """
     if not repository_path:
         repository_path = debian.pwd()
 
