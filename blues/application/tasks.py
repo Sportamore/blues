@@ -91,6 +91,9 @@ def deploy(revision=None, auto_reload=True, force=False, update_pip=False):
 
 @task
 def install_requirements():
+    """
+    Install requirements witihn a virtualenv
+    """
     from .deploy import install_requirements
     from .project import use_virtualenv
 
@@ -123,7 +126,8 @@ def deployed():
         origin = git.get_origin(repository_path)
         origin_commit, origin_message = git.log(repository_path, refspec=origin)[0]
         if head_commit != origin_commit:
-            info('Pending commit: {} comment: {}', origin_commit, origin_message)
+            info('Remote: {} commit: {} comment: {}',
+                 origin, origin_commit, origin_message)
 
         return head_commit, origin_commit
 
@@ -249,6 +253,11 @@ def generate_nginx_conf(role='www'):
 
 
 def get_github_owner():
+    """
+    Get the account/organization from the project's github url
+
+    :return str: account name
+    """
     from .project import git_repository
     from ..git import parse_url
 
@@ -260,6 +269,11 @@ def get_github_owner():
 
 
 def get_latest_release():
+    """
+    Get the latest tagged release from the remote repo
+
+    :return tuple: tag, revision
+    """
     from .project import latest_release
 
     info('Locating the latest release')
@@ -267,6 +281,11 @@ def get_latest_release():
 
 
 def notify_deploy_start(role=None, notifier=slack.notify, quiet=False):
+    """
+    Send a message to slack about the start of a deployment
+
+    :return str: formatted message
+    """
     from .project import project_name
 
     msg = '`{deployer}` started deploying '
@@ -293,6 +312,11 @@ def notify_deploy_start(role=None, notifier=slack.notify, quiet=False):
 
 
 def notify_deploy(role=None, commits=None, notifier=slack.notify, quiet=False):
+    """
+    Send a message to slack about a successful deployment
+
+    :return str: formatted message
+    """
     from .project import project_name, git_repository_path
 
     msg = '`{deployer}` deployed '
