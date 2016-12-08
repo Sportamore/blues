@@ -1,6 +1,7 @@
 # coding=utf-8
 
 import os
+import re
 
 from fabric.context_managers import settings
 from fabric.decorators import task
@@ -54,7 +55,7 @@ def configure():
 
 
 @task
-def deploy(auto_reload=True, force=False, update_pip=False):
+def deploy(revision=None, auto_reload=True, force=False, update_pip=False):
     """
     Reset source to configured branch and install requirements, if needed
 
@@ -66,9 +67,14 @@ def deploy(auto_reload=True, force=False, update_pip=False):
     from .project import use_virtualenv
 
     # Reset git repo
-    previous_commit, current_commit = update_source()
-    code_changed = current_commit is not None and \
-                   previous_commit != current_commit
+    previous_commit, current_commit = update_source(revision)
+    code_changed = current_commit is not None and previous_commit != current_commit
+
+    if code_changed:
+        info('Updated git repository from: {} to: {}', previous_commit, current_commit)
+
+    else:
+        info('Reset git repository to: {}', current_commit)
 
     if code_changed or force:
         # Install python dependencies
@@ -85,6 +91,9 @@ def deploy(auto_reload=True, force=False, update_pip=False):
 
 @task
 def install_requirements():
+    """
+    Install requirements witihn a virtualenv
+    """
     from .deploy import install_requirements
     from .project import use_virtualenv
 
@@ -105,15 +114,20 @@ def deployed():
         repository_path = git_repository_path()
         git.fetch(repository_path)
 
-        head_commit, head_message = git.log(repository_path)[0]
-        origin_commit, origin_message = git.log(repository_path,
-                                                commit='origin')[0]
-
-        info('Deployed commit: {} - {}', head_commit[:7], head_message)
-        if head_commit == origin_commit:
-            info(indent('(up-to-date with origin)'))
+        head_tag, head_tag_delta = git.current_tag(repository_path)
+        if head_tag_delta > 0:
+            info("Latest tag: {} distance: {}", head_tag, head_tag_delta)
         else:
-            info('Pending release: {} - {}', origin_commit[:7], origin_message)
+            info("Deployed tag: {}", head_tag)
+
+        head_commit, head_message = git.log(repository_path)[0]
+        info('Deployed revision: {} comment: {}', head_commit, head_message)
+
+        origin = git.get_origin(repository_path)
+        origin_commit, origin_message = git.log(repository_path, refspec=origin)[0]
+        if head_commit != origin_commit:
+            info('Remote: {} revision: {} comment: {}',
+                 origin, origin_commit, origin_message)
 
         return head_commit, origin_commit
 
@@ -239,6 +253,11 @@ def generate_nginx_conf(role='www'):
 
 
 def get_github_owner():
+    """
+    Get the account/organization from the project's github url
+
+    :return str: account name
+    """
     from .project import git_repository
     from ..git import parse_url
 
@@ -249,7 +268,24 @@ def get_github_owner():
     return parse_url(url)['gh_owner']
 
 
+def get_latest_release():
+    """
+    Get the latest tagged release from the remote repo
+
+    :return tuple: tag, revision
+    """
+    from .project import latest_release
+
+    info('Locating the latest release')
+    return latest_release()
+
+
 def notify_deploy_start(role=None, notifier=slack.notify, quiet=False):
+    """
+    Send a message to slack about the start of a deployment
+
+    :return str: formatted message
+    """
     from .project import project_name
 
     msg = '`{deployer}` started deploying '
@@ -276,6 +312,11 @@ def notify_deploy_start(role=None, notifier=slack.notify, quiet=False):
 
 
 def notify_deploy(role=None, commits=None, notifier=slack.notify, quiet=False):
+    """
+    Send a message to slack about a successful deployment
+
+    :return str: formatted message
+    """
     from .project import project_name, git_repository_path
 
     msg = '`{deployer}` deployed '

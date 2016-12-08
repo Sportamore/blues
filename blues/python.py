@@ -95,7 +95,7 @@ def pip(command, *options, **kwargs):
     # TODO: change pip log location, per env? per user?
     # Perhaps we should just remove the log_file argument and let pip put it
     # where it belongs.
-    info('Running pip {}', command)
+    info('Running pip {} {}', command, ' '.join(options))
     bin = kwargs.pop('bin',
                      'pip3' if requested_version() >= (3,)
                      else 'pip')
@@ -110,6 +110,6 @@ def pip(command, *options, **kwargs):
 
 
 @task
-def update_pip():
+def update_pip(quiet=False):
     info('Updating pip')
-    pip('install -U pip')
+    pip('install', '-U', 'pip', quiet=quiet)

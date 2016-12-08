@@ -183,7 +183,6 @@ def maybe_install_requirements(previous_commit, current_commit, force=False, upd
                 installation_file)
 
     if has_changed or force:
-        info('Install requirements {}', installation_file)
         install_requirements(installation_file, update_pip=update_pip)
     else:
         info(indent('(requirements not changed in {}...skipping)'),
@@ -280,6 +279,11 @@ def diff_requirements_smart(previous_commit, current_commit, filename,
 
 
 def get_installation_method(filename):
+    """
+    Guess installation method from the requirements file
+
+    :return: 'pip' or 'setuptools'
+    """
     if filename.endswith('.txt') or \
             filename.endswith('.pip'):
         return 'pip'
@@ -300,18 +304,20 @@ def install_requirements(installation_file=None, update_pip=False):
     with sudo_project():
         path = virtualenv_path()
 
-        info('Installing requirements from file {}', installation_file)
-
         with virtualenv.activate(path):
             installation_method = get_installation_method(installation_file)
             if update_pip:
-                python.update_pip()
+                python.update_pip(quiet=True)
 
             if installation_method == 'pip':
+                info('Installing requirements from: {}', installation_file)
                 python.pip('install', '-r', installation_file, quiet=True)
 
             elif installation_method == 'setuptools':
-                python.pip('install', '-e', git_repository_path(), quiet=True)
+                src_path = git_repository_path()
+
+                info('Installing directory: {}', src_path)
+                python.pip('install', '-e', src_path, quiet=True)
 
             else:
                 raise ValueError(
@@ -351,29 +357,28 @@ def install_source():
     return cloned
 
 
-def update_source():
+def update_source(revision=None):
     """
-    Update application repository with configured branch.
+    Update application repository to the specified revision,
+    defaults to the projects branch if not specified.
 
     :return: tuple(previous commit, current commit)
     """
-    from .project import sudo_project, git_repository_path, git_repository
+    from .project import sudo_project, git_repository_path, remote_head
+
+    if not revision:
+        branch, revision = remote_head()
+        info('Fetched branch: {} rev: {}', branch, revision)
 
     with sudo_project():
         # Get current commit
-        path = git_repository_path()
-        previous_commit = git.get_commit(path, short=True)
+        repository_path = git_repository_path()
+        previous_commit = git.get_commit(repository_path, short=True)
 
         # Update source from git (reset)
-        repository = git_repository()
-        current_commit = git.reset(repository['branch'],
-                                   repository_path=path,
+        current_commit = git.reset(repository_path=repository_path,
+                                   revision=revision,
                                    ignore=blueprint.get('git_force_ignore'))
-
-        if current_commit is not None and current_commit != previous_commit:
-            info(indent('(new version)'))
-        else:
-            info(indent('(same commit)'))
 
         return previous_commit, current_commit
 

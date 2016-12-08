@@ -102,7 +102,37 @@ def fetch(repository_path=None):
         run('git fetch origin', pty=False)
 
 
+def lsremote(repo_url, reftype='branches'):
+    """
+    Get references from a remote repository.
+    :param reftype: the reference types to return: 'branches' or 'tags'
+
+    :return dict: {reference: revision, ...}
+    """
+
+    prefixes = {
+        'branches': 'refs/heads/',
+        'tags': 'refs/tags/'
+    }
+    prefix = prefixes[reftype]
+
+    with silent():
+        cmd = 'git -c color.ui=never --no-pager ls-remote {}'.format(repo_url)
+        output = local(cmd, capture=True)
+        ls = output.strip().split('\n')
+
+    pattern = r'(?P<hash>\w+)\s+(?P<label>[\w\.\-\/]+)'
+    return {match.group('label')[len(prefix):]: match.group('hash')
+            for match in map(lambda x: re.match(pattern, x), ls)
+            if match and match.group('label').startswith(prefix)}
+
+
 def show_file(repository_path, filename, revision='HEAD'):
+    """
+    Get the contents of a file from a specific revision
+
+    :return str: file contents
+    """
     with cd(repository_path), silent():
         # pipe through cat to get rid of any ANSI codes
         output = run('git show {revision}:{filename} | cat'.format(
@@ -113,11 +143,11 @@ def show_file(repository_path, filename, revision='HEAD'):
     return output
 
 
-def reset(branch, repository_path=None, **kwargs):
+def reset(revision, repository_path=None, **kwargs):
     """
-    Fetch, reset, clean and checkout repository branch.
+    Fetch, reset, clean and checkout revision.
 
-    :return: commit short hash or None
+    :return str: commit short hash
     """
     if not repository_path:
         repository_path = debian.pwd()
@@ -126,7 +156,7 @@ def reset(branch, repository_path=None, **kwargs):
 
     with cd(repository_path):
         name = os.path.basename(repository_path)
-        info('Resetting git repository: {}@{}', name, branch or '<default>')
+        info('Resetting git repository: {}@{}', name, revision or 'HEAD')
 
         with silent('warnings'):
             commands = [
@@ -136,10 +166,8 @@ def reset(branch, repository_path=None, **kwargs):
                 'git clean {} -fdx'.format(' '.join(['-e {}'.format(ign)
                                                      for ign in ignore])),
                 'git checkout HEAD',  # Checkout HEAD
-                # Reset to the tip of remote branch, or the tip of the remote
-                # repository in case of no specified branch.
-                'git reset refs/remotes/origin/{} --hard'.format(
-                    branch or 'HEAD'),
+                # Reset to the specified revision, or the tip of the remote repository.
+                'git reset {} --hard'.format(revision or 'HEAD'),
             ]
 
             output = run(' && '.join(commands))
@@ -147,27 +175,10 @@ def reset(branch, repository_path=None, **kwargs):
         if output.return_code != 0:
             warn('Failed to reset repository "{}", probably permission denied!'
                  .format(name))
+            return None
+
         else:
-            # Pipe through cat in order to suppress non-text output from
-            # git-show. This includes terminal colors but also other
-            # terminal-stuff that is emitted by git-show if it prints to a
-            # terminal.
-            with silent('warnings'):
-                output = run('git show --oneline -s | cat')
-
-            match_commit = re.search(
-                r'(^|\n)(?P<commit>[0-9a-f]+)'
-                r'\s(?P<subject>.*)(\r|\n|$)',
-                output)
-
-            if match_commit is None:
-                raise ValueError('Cannot get commit info from output: %r' %
-                                 output)
-
-            commit = match_commit.group('commit')
-            subject = match_commit.group('subject')
-            info('HEAD is now at: {}', ' '.join([commit, subject]))
-
+            commit, _ = log()[0]
             return commit
 
 
@@ -177,21 +188,27 @@ def get_commit(repository_path=None, short=False):
 
     :param repository_path: Repository path
     :param short: Format git commit hash in short (7) format
-    :return: Commit hash
+    :return str: Commit hash
     """
     if not repository_path:
         repository_path = debian.pwd()
 
     with cd(repository_path), silent():
-        output = run('git rev-parse HEAD')
-        commit = output.strip()
+        cmd = 'git rev-parse'
         if short:
-            commit = commit[:7]
+            cmd += ' --short'
+
+        commit = run('{} HEAD'.format(cmd)).strip()
 
     return commit
 
 
 def get_local_commiter():
+    """
+    Retrieves the calling user's git name
+
+    :return str: username
+    """
     return local('git config user.name', capture=True)
 
 
@@ -202,7 +219,7 @@ def diff_stat(repository_path=None, commit='HEAD^', path=None):
     :param repository_path: Repository path
     :param commit: Commit to diff against, ex 12345..67890
     :param path: Path or file to diff
-    :return: tuple(num files changed, num insertions, num deletions)
+    :return tuple: int(files changed), int(insertions), int(deletions)
     """
     if not repository_path:
         repository_path = debian.pwd()
@@ -233,7 +250,22 @@ def diff_stat(repository_path=None, commit='HEAD^', path=None):
         return changed, insertions, deletions
 
 
-def log(repository_path=None, commit='HEAD', count=1, path=None):
+def get_origin(repository_path):
+    """
+    Get the name of the remote (tracking) branch
+
+    :return str: refspec
+    """
+    if not repository_path:
+        repository_path = debian.pwd()
+
+    with cd(repository_path), silent():
+        origin = run('git rev-parse --abbrev-ref --symbolic-full-name @{u}', pty=False)
+
+    return origin
+
+
+def log(repository_path=None, refspec='HEAD', count=1, path=None, author=False):
     """
     Get log for repository and optional commit range.
 
@@ -246,15 +278,21 @@ def log(repository_path=None, commit='HEAD', count=1, path=None):
         repository_path = debian.pwd()
 
     with cd(repository_path), silent():
-        cmd = 'git log --pretty=oneline {}'.format(commit)
+        cmd = 'git -c color.ui=never --no-pager log'
+        cmd += ' --pretty="format:%h {}"'.format('%an: %s' if author else '%s')
+
         if count:
-            cmd += ' -{}'.format(count)
+            cmd += ' -n{}'.format(count)
+
+        cmd += ' {}'.format(refspec)
+
         if path:
             cmd += ' -- {}'.format(path)
+
         output = run(cmd, pty=False)
-        git_log = output.stdout.strip()
-        git_log = [col.strip() for row in git_log.split('\n') for col in row.split(' ', 1) if col]
-        git_log = zip(git_log[::2], git_log[1::2])
+
+        git_log = output.stdout.strip().split('\n')
+        git_log = [row.split(' ', 1) for row in git_log]
 
     return git_log
 
@@ -266,29 +304,28 @@ def log_between_tags(repository_path, tag1, tag2):
     :param repository_path:
     :param tag1: oldest tag
     :param tag2: newset tag
-    :return: changelog in text
+    :return: changelog as a string
     """
-    with cd(repository_path):
-        cmd = 'git --no-pager log --pretty=oneline {0}..{1}'.format(
-            tag1, tag2)
-        # removes carriage return
-        changes = run(cmd).replace('\r', '')
-        return changes
+    refspec = '{0}..{1}'.format(tag1, tag2)
+    git_log = log(repository_path, refspec=refspec, count=False, author=True)
+    return u'\n'.join([u' :: '.join(row) for row in git_log])
 
 
 def current_tag(repository_path=None):
     """
     Get most recent tag
     :param repository_path: Repository path
-    :return: The most recent tag
+    :return: The most recent tag, and the number of commits from HEAD
     """
     if not repository_path:
         repository_path = debian.pwd()
+
     with cd(repository_path), silent():
         output = run('git describe --long --tags --dirty --always', pty=False)
-
         # 20141114.1-306-g72354ae-dirty
-        return output.strip().rsplit('-', 2)[0]
+        tag, delta, _ = output.strip().split('-')
+
+        return tag, int(delta)
 
 
 def get_two_most_recent_tags(repository_path):
@@ -345,7 +382,6 @@ def parse_url(url, branch=None):
             url_branch, egg = url_branch.split('#', 1)
 
     if url is None or not url:
-        import pdb; pdb.set_trace()
         raise ValueError('The git URL is not, have you set it correctly?')
 
     if branch is None:

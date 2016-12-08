@@ -1,4 +1,5 @@
 import os
+import re
 from contextlib import contextmanager
 
 from refabric.context_managers import sudo
@@ -9,7 +10,8 @@ from .. import git
 __all__ = [
     'app_root', 'project_home', 'git_root', 'use_virtualenv', 'virtualenv_path',
     'git_repository', 'git_repository_path', 'python_path', 'sudo_project',
-    'requirements_txt', 'use_python', 'static_base', 'project_name'
+    'requirements_txt', 'use_python', 'static_base', 'project_name',
+    'latest_release', 'remote_head'
 ]
 
 blueprint = blueprints.get('blues.app')
@@ -39,6 +41,9 @@ git_repository = lambda: git.parse_url(blueprint.get('git_url'),
 # /srv/app/project/src/repo.git
 git_repository_path = lambda: os.path.join(git_root(),
                                            git_repository()['name'])
+# 1.2, 1.2.3, v1.0
+git_tag_pattern = lambda: blueprint.get('release_pattern') or r'^v?\d+(\.\d+)+$'
+
 # /srv/app/project/src/repo.git
 python_path = lambda: os.path.join(git_repository_path(),
                                    blueprint.get('git_source', 'src'))
@@ -58,3 +63,25 @@ static_base = lambda: blueprint.get('static_base',
 def sudo_project():
     with sudo(project_name()):
         yield project_name()
+
+
+def latest_release():
+    """
+    Get the name and reivision of the latest remote tag.
+    :return: label, revision
+    """
+    remote_tags = git.lsremote(git_repository()['url'], reftype='tags')
+    return sorted([(tag, rev) for (tag, rev) in remote_tags.items()
+                   if re.match(git_tag_pattern(), tag)])[-1]
+
+
+def remote_head():
+    """
+    Get the name and reivision of the remote head.
+    :return: branchname, revision
+    """
+    repo = git_repository()
+    ls = git.lsremote(repo['url'], reftype='branches')
+
+    branch = repo['branch']
+    return (branch, ls[branch][:7])
