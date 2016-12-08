@@ -121,12 +121,12 @@ def deployed():
             info("Deployed tag: {}", head_tag)
 
         head_commit, head_message = git.log(repository_path)[0]
-        info('Deployed commit: {} comment: {}', head_commit, head_message)
+        info('Deployed revision: {} comment: {}', head_commit, head_message)
 
         origin = git.get_origin(repository_path)
         origin_commit, origin_message = git.log(repository_path, refspec=origin)[0]
         if head_commit != origin_commit:
-            info('Remote: {} commit: {} comment: {}',
+            info('Remote: {} revision: {} comment: {}',
                  origin, origin_commit, origin_message)
 
         return head_commit, origin_commit
