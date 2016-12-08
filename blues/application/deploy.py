@@ -368,7 +368,6 @@ def update_source(revision=None):
 
     if not revision:
         branch, revision = remote_head()
-        info('Fetched branch: {} rev: {}', branch, revision)
 
     with sudo_project():
         # Get current commit

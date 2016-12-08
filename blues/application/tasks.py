@@ -268,16 +268,20 @@ def get_github_owner():
     return parse_url(url)['gh_owner']
 
 
-def get_latest_release():
+def get_releases():
     """
-    Get the latest tagged release from the remote repo
-
-    :return tuple: tag, revision
+    Alias for project.releases
     """
-    from .project import latest_release
+    from .project import releases
+    return releases()
 
-    info('Locating the latest release')
-    return latest_release()
+
+def get_remote_head():
+    """
+    Alias for project.remote_head
+    """
+    from .project import remote_head
+    return remote_head()
 
 
 def notify_deploy_start(role=None, notifier=slack.notify, quiet=False):

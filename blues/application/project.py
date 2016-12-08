@@ -1,9 +1,11 @@
 import os
 import re
 from contextlib import contextmanager
+from collections import OrderedDict
 
 from refabric.context_managers import sudo
 from refabric.contrib import blueprints
+from refabric.utils import info
 
 from .. import git
 
@@ -11,7 +13,7 @@ __all__ = [
     'app_root', 'project_home', 'git_root', 'use_virtualenv', 'virtualenv_path',
     'git_repository', 'git_repository_path', 'python_path', 'sudo_project',
     'requirements_txt', 'use_python', 'static_base', 'project_name',
-    'latest_release', 'remote_head'
+    'releases', 'remote_head'
 ]
 
 blueprint = blueprints.get('blues.app')
@@ -65,23 +67,33 @@ def sudo_project():
         yield project_name()
 
 
-def latest_release():
+def releases():
     """
     Get the name and reivision of the latest remote tag.
-    :return: label, revision
+    :return OrderedDict: {label: revision, ...}
     """
-    remote_tags = git.lsremote(git_repository()['url'], reftype='tags')
-    return sorted([(tag, rev) for (tag, rev) in remote_tags.items()
-                   if re.match(git_tag_pattern(), tag)])[-1]
+    repo = git_repository()
+    remote_tags = git.lsremote(repo['url'], reftype='tags')
+
+    filtered_tags = [(tag, rev[:7]) for (tag, rev) in remote_tags.items()
+                     if re.match(git_tag_pattern(), tag)]
+    releases_tags = OrderedDict(sorted(filtered_tags,
+                                       key=lambda x: x[0]))
+
+    # info('Got {} releases from: {}', len(releases_tags), repo['url'])
+
+    return releases_tags
 
 
 def remote_head():
     """
     Get the name and reivision of the remote head.
-    :return: branchname, revision
+    :return: (branchname, revision)
     """
     repo = git_repository()
     ls = git.lsremote(repo['url'], reftype='branches')
 
+    # info('Got {} branches from: {}', len(ls), repo['url'])
+
     branch = repo['branch']
-    return (branch, ls[branch][:7])
+    return ('origin/{}'.format(branch), ls[branch][:7])
