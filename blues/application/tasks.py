@@ -110,25 +110,32 @@ def deployed():
     """
     from .project import sudo_project, git_repository_path
 
+    msg = ''
+    params = []
+
     with sudo_project():
         repository_path = git_repository_path()
         git.fetch(repository_path)
 
         head_tag, head_tag_delta = git.current_tag(repository_path)
         if head_tag_delta > 0:
-            info("Latest tag: {} distance: {}", head_tag, head_tag_delta)
+            msg += 'Latest tag: {} distance: {}'
+            params += [head_tag, head_tag_delta]
         else:
-            info("Deployed tag: {}", head_tag)
+            msg += 'Deployed tag: {}'
+            params += [head_tag]
 
         head_commit, head_message = git.log(repository_path)[0]
-        info('Deployed revision: {} comment: {}', head_commit, head_message)
+        msg += '\nRevision: {} comment: {}'
+        params += [head_commit, head_message]
 
         origin = git.get_origin(repository_path)
         origin_commit, origin_message = git.log(repository_path, refspec=origin)[0]
         if head_commit != origin_commit:
-            info('Remote: {} revision: {} comment: {}',
-                 origin, origin_commit, origin_message)
+            msg += '\nRemote: {} revision: {} comment: {}'
+            params += [origin, origin_commit, origin_message]
 
+        info(msg, *params)
         return head_commit, origin_commit
 
 
