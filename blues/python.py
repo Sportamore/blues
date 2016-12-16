@@ -100,7 +100,8 @@ def pip(command, *options, **kwargs):
                      'pip3' if requested_version() >= (3,)
                      else 'pip')
     quiet = kwargs.pop('quiet', False)
-    cmd = '{pip} {command} {options} {verbosity} --log={log_file} --log-file={log_file}'
+    cmd = ('{pip} {command} {options} {verbosity} '
+           '--exists-action=s --log={log_file} --log-file={log_file}')
 
     run(cmd.format(pip=bin,
                    command=command,
