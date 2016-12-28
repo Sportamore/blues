@@ -25,7 +25,7 @@ from refabric.utils import info
 
 from blues import debian
 
-__all__ = ['configure']
+__all__ = ['configure', 'disable']
 
 
 blueprint = blueprints.get(__name__)
@@ -45,7 +45,7 @@ def configure():
                 run('crontab -u {} {}'.format(user, os.path.join(temp_dir, user)))
 
 @task
-def clear(user=None):
+def disable(user=None):
     """
     Removes the crontab for a single user
     """
