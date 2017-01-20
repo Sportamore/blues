@@ -74,3 +74,8 @@ kibana.defaultAppId: "{{ landing_page }}"
 
 # Set this to true to log all events, including system usage information and all requests.
 # logging.verbose: false
+
+## kibana/reporting
+
+# Server secret
+reporting.encryptionKey: "{{ reporting_secret }}"

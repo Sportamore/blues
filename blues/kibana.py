@@ -15,6 +15,7 @@ Kibana Blueprint
         elasticsearch_host: localhost  # Elasticsearch server target (Default: localhost)
         basepath: ""                   # External url prefix (must not end with slash)
         landing_page: discover         # Kibana app to load by default
+        reporting_secret: secret_key   # Required by reporting plugin
         plugins:                       # Optional list of plugins to install
           - elasticsearch/marvel/latest
 
@@ -56,7 +57,7 @@ def install():
         info('Adding apt repository for {} version {}', 'kibana', version)
         debian.add_apt_repository('https://packages.elastic.co/kibana/{}/debian stable main'.format(version))
 
-        info('Adding apt key for Elastic.co')
+        info('Adding apt key for {}', 'Elastic.co')
         debian.add_apt_key('https://packages.elastic.co/GPG-KEY-elasticsearch')
 
         info('Installing {} version {}', 'kibana', version)
@@ -69,7 +70,6 @@ def install():
         # Install plugins
         plugins = blueprint.get('plugins', [])
         for plugin in plugins:
-            info('Installing kibana plugin: "{}" ...', plugin)
             install_plugin(plugin)
 
 
@@ -81,7 +81,8 @@ def configure():
     context = {
         'elasticsearch_host': blueprint.get('elasticsearch_host', 'localhost'),
         'basepath': blueprint.get('basepath', ''),
-        'landing_page': blueprint.get('landing_page', 'discover')
+        'landing_page': blueprint.get('landing_page', 'discover'),
+        'reporting_secret': blueprint.get('reporting_secret', 'secret_key')
     }
     config = blueprint.upload('./kibana.yml', '/opt/kibana/config/', context)
 
@@ -97,5 +98,11 @@ def install_plugin(name=None):
     if not name:
         abort('No plugin name given')
 
-    with sudo():
-        run('/opt/kibana/bin/kibana plugin --install {}'.format(name))
+    name_parts = name.split('/')
+
+    output = run('/opt/kibana/bin/kibana plugin --remove {}'.format(name_parts[1]))
+    if output.return_code != 0:
+        info('Removed previously installed plugin "{}"', name_parts[1])
+
+    info('Installing kibana plugin: "{}" ...', name_parts[1])
+    run('/opt/kibana/bin/kibana plugin --install {}'.format(name))
