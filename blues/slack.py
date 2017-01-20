@@ -32,7 +32,7 @@ import json
 blueprint = blueprints.get(__name__)
 
 
-def notify(msg, quiet=False):
+def notify(msg, quiet=True):
     slack_config = blueprint.get('')
 
     if isinstance(slack_config, dict):
@@ -68,7 +68,7 @@ def notify_with_config(msg, config, quiet):
                      msg=msg, icon_emoji=icon_emoji, quiet=quiet)
 
 
-def send_request(endpoint, channel, username, msg, icon_emoji, quiet=False):
+def send_request(endpoint, channel, username, msg, icon_emoji, quiet=True):
     data = json.dumps({
         "channel": channel,
         "username": username,
@@ -79,7 +79,8 @@ def send_request(endpoint, channel, username, msg, icon_emoji, quiet=False):
     req = urllib2.Request(endpoint, data, {'Content-Type': 'application/json'})
     try:
         urllib2.urlopen(req).close()
-    except urllib2.HTTPError as e:
+
+    except Exception as e:
         if quiet:
             warn(e)
         else:

@@ -21,6 +21,7 @@ NewRelic Server Blueprint
           - uwsgi
 """
 from fabric.decorators import task
+from fabric.utils import warn
 from refabric.api import run, info
 
 from refabric.context_managers import sudo
@@ -160,13 +161,18 @@ def send_deploy_event(payload=None):
                 }
             })
 
-        request = urllib2.Request(url, headers=headers)
-        urllib2.urlopen(request, data=payload)
-        info('Deploy event sent')
+        try:
+            request = urllib2.Request(url, headers=headers)
+            urllib2.urlopen(request, data=payload)
+            info('Deploy event sent')
+
+        except Exception:
+            warn('NewRelic notification failed')
+
     else:
         for i in ['app_id', 'newrelic_key']:
-             if not locals().get(i, None):
-                 info('missing key: {}'.format(i))
+            if not locals().get(i, None):
+                info('missing key: {}'.format(i))
         for i in ['app_id', 'newrelic_event_key']:
-             if not locals().get(i, None):
-                 info('missing key: {}'.format(i))
+            if not locals().get(i, None):
+                info('missing key: {}'.format(i))
