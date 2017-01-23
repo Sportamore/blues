@@ -52,6 +52,7 @@ def setup():
     """
     install()
     configure()
+    debian.add_rc_service('uwsgi')
 
 
 def install():
@@ -82,8 +83,12 @@ def configure():
     Upload vassals
     """
     with sudo():
-        # Upload templates
-        blueprint.upload('init/', '/etc/init/')
+        # Upload service templates
+        if debian.lsb_release() == '16.04':
+            blueprint.upload('systemd/uwsgi.service', '/etc/systemd/system/uwsgi.service')
+
+        else:
+            blueprint.upload('init/uwsgi.conf', '/etc/init/uwsgi.conf')
 
 
 @task
@@ -136,6 +141,7 @@ def status(vassal_name=None):
     """
     Get basic stats from UWSGI
     """
+    # info("vassal: {}, project: {}", vassal_name, blueprint.get('project'))
     with sudo(), silent():
         vassal = vassal_name or blueprint.get('project')
         stats_path = os.path.join(tmpfs_path, '{}-stats.sock'.format(vassal))
