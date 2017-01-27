@@ -60,6 +60,9 @@ def install():
         # Ensure python (pip) is installed
         python.install()
 
+        # Revent versions of uwsgi depends on a modern version of pip ( >=9 )
+        python.update_pip()
+
         # PIP install system wide uWSGI
         package = 'uwsgi'
         version = blueprint.get('version')
