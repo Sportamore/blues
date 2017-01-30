@@ -51,7 +51,7 @@ postgres_root = lambda *a: os.path.join('/etc/postgresql/{}/main/'.format(versio
 def add_repository():
     name = debian.lsb_codename()
     info('Adding postgres {} apt repository...', name)
-    repo = 'https://apt.postgresql.org/pub/repos/apt/ {}-pgdg main'.format(name)
+    repo = 'deb https://apt.postgresql.org/pub/repos/apt/ {}-pgdg main'.format(name)
     debian.add_apt_key('https://www.postgresql.org/media/keys/ACCC4CF8.asc')
     debian.add_apt_repository(repository=repo, src=True)
     debian.apt_get_update()
