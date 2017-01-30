@@ -70,6 +70,7 @@ def install():
             'postgresql-contrib-{}'.format(v),
         ]
         debian.apt_get('install', *packages)
+        debian.add_rc_service('postgresql')
 
 
 def install_postgis(v=None):
