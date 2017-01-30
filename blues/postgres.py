@@ -43,6 +43,7 @@ start = debian.service_task('postgresql', 'start')
 stop = debian.service_task('postgresql', 'stop')
 restart = debian.service_task('postgresql', 'restart')
 reload = debian.service_task('postgresql', 'reload')
+status = debian.service_task('postgresql', 'status')
 
 version = lambda: blueprint.get('version', '9.1')
 postgres_root = lambda *a: os.path.join('/etc/postgresql/{}/main/'.format(version()), *a)
@@ -99,7 +100,7 @@ def setup(drop=False):
 @task
 def configure():
     """
-    Configure Postgresql
+    Configure Postgresql, start service if not running, restart if reconfigured
     """
     context = {
         'listen_addresses': blueprint.get('bind', 'localhost'),
@@ -119,6 +120,8 @@ def configure():
 
     if any(updates):
         restart()
+    elif not(status()):
+        start()
 
 
 @task
