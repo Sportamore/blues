@@ -34,7 +34,7 @@ from refabric.contrib import blueprints
 from . import debian
 
 __all__ = ['start', 'stop', 'restart', 'reload', 'setup', 'configure',
-           'setup_schemas', 'dump']
+           'setup_schemas', 'dump', 'status']
 
 
 blueprint = blueprints.get(__name__)
