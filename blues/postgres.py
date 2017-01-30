@@ -81,7 +81,7 @@ def install_postgis(v=None):
 
 
 @task
-def setup():
+def setup(drop=False):
     """
     Install, configure Postgresql and create schemas
     """
@@ -93,7 +93,7 @@ def setup():
     configure()
 
     # Create schemas and related users
-    setup_schemas()
+    setup_schemas(drop=drop)
 
 
 @task
