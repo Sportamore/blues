@@ -367,6 +367,10 @@ def update_rc(basename, priorities, force=False):
                                       priorities), pty=False, use_sudo=True)
 
 
+def systemd_daemon_reload():
+    run('systemctl daemon-reload', pty=False, use_sudo=True)
+
+
 def systemd_service(name, action='is-enabled'):
     name = name if name.endswith('.service') else '{}.service'.format(name)
     run('systemctl {} {}'.format(action, name), pty=False, use_sudo=True)
