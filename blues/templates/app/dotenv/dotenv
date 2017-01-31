@@ -1,0 +1,6 @@
+# Environment for {{ project_name }}
+{% if env -%}
+{% for key, value in env.iteritems() %}
+{{ key }}="{{ value }}"
+{%- endfor %}
+{%- endif %}
