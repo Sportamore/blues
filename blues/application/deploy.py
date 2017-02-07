@@ -36,9 +36,9 @@ __all__ = [
     'install_source',
     'update_source',
     'install_providers',
-    'notify_deploy_start',
-    'notify_deploy_finish',
-    'notify_deploy_event'
+    'notify_start',
+    'notify_finish',
+    'notify_event'
 ]
 
 
@@ -430,7 +430,7 @@ def _deploy_summary(title, revision=None):
     }
 
 
-def notify_deploy_start():
+def notify_start():
     """
     Send a message to slack about the start of a deployment
 
@@ -444,7 +444,7 @@ def notify_deploy_start():
     return message
 
 
-def notify_deploy_finish():
+def notify_finish():
     """
     Send a message to slack about the end of a deployment
 
@@ -458,7 +458,7 @@ def notify_deploy_finish():
     return message
 
 
-def notify_deploy_event(commits=None):
+def notify_event(commits=None):
     """
     Send a message to slack about a successful deployment
 
