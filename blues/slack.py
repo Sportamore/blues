@@ -40,7 +40,7 @@ def notify(msg, attachment=None, quiet=True):
         slack_config = [slack_config]
 
     for config in slack_config:
-        notify_with_config(msg, config, quiet)
+        notify_with_config(msg, attachment, config, quiet)
 
 
 def notify_with_config(msg, attachment, config, quiet):
@@ -70,15 +70,17 @@ def notify_with_config(msg, attachment, config, quiet):
 
 
 def send_request(endpoint, channel, username, msg, attachment, icon_emoji, quiet=True):
-    data = json.dumps({
+    data = {
         "channel": channel,
         "username": username,
         "text": msg,
-        "attachment": attachment,
         "icon_emoji": icon_emoji,
-    })
+    }
 
-    req = urllib2.Request(endpoint, data, {'Content-Type': 'application/json'})
+    if attachment:
+        data["attachments"] = [attachment, ]
+
+    req = urllib2.Request(endpoint, json.dumps(data), {'Content-Type': 'application/json'})
     try:
         urllib2.urlopen(req).close()
 

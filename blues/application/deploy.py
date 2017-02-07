@@ -401,7 +401,7 @@ def install_providers():
         provider.install()
 
 
-def _deploy_summary(title, revision=None):
+def _deploy_summary(title, revision):
     from hashlib import md5
     from time import time
     from .project import project_name
@@ -430,28 +430,28 @@ def _deploy_summary(title, revision=None):
     }
 
 
-def notify_start():
+def notify_start(title, revision=None):
     """
     Send a message to slack about the start of a deployment
 
     :return str: plaintext message part
     """
     message = 'Deploy started'
-    summary = _deploy_summary()
+    summary = _deploy_summary(title, revision)
     summary["color"] = "warning"
 
     slack.notify(message, summary)
     return message
 
 
-def notify_finish():
+def notify_finish(title, revision=None):
     """
     Send a message to slack about the end of a deployment
 
     :return str: plaintext message part
     """
     message = 'Deploy Succeeded'
-    summary = _deploy_summary()
+    summary = _deploy_summary(title, revision)
     summary["color"] = "good"
 
     slack.notify(message, summary)
