@@ -1,3 +1,4 @@
+# coding=utf-8
 """
 Slack Blueprint
 ===============
@@ -32,7 +33,7 @@ import json
 blueprint = blueprints.get(__name__)
 
 
-def notify(msg, quiet=True):
+def notify(msg, attachment=None, quiet=True):
     slack_config = blueprint.get('')
 
     if isinstance(slack_config, dict):
@@ -42,7 +43,7 @@ def notify(msg, quiet=True):
         notify_with_config(msg, config, quiet)
 
 
-def notify_with_config(msg, config, quiet):
+def notify_with_config(msg, attachment, config, quiet):
     channels = config.get('channels', [])
     channel = config.get('channel', None)
 
@@ -65,14 +66,15 @@ def notify_with_config(msg, config, quiet):
 
     for channel in set(channels):
         send_request(endpoint=endpoint, channel=channel, username=username,
-                     msg=msg, icon_emoji=icon_emoji, quiet=quiet)
+                     msg=msg, attachment=attachment, icon_emoji=icon_emoji, quiet=quiet)
 
 
-def send_request(endpoint, channel, username, msg, icon_emoji, quiet=True):
+def send_request(endpoint, channel, username, msg, attachment, icon_emoji, quiet=True):
     data = json.dumps({
         "channel": channel,
         "username": username,
         "text": msg,
+        "attachment": attachment,
         "icon_emoji": icon_emoji,
     })
 

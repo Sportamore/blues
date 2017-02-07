@@ -1,3 +1,5 @@
+# coding=utf-8
+
 import os
 import pkg_resources
 import re
@@ -21,6 +23,7 @@ from .. import git
 from .. import user
 from .. import python
 from .. import virtualenv
+from .. import slack
 
 __all__ = [
     'install_project',
@@ -32,7 +35,10 @@ __all__ = [
     'install_or_update_source',
     'install_source',
     'update_source',
-    'install_providers'
+    'install_providers',
+    'notify_deploy_start',
+    'notify_deploy_finish',
+    'notify_deploy_event'
 ]
 
 
@@ -393,3 +399,93 @@ def install_providers():
             provider.manager.install()
 
         provider.install()
+
+
+def _deploy_summary(title, revision=None):
+    from hashlib import md5
+    from time import time
+    from .project import project_name
+
+    deployer = git.get_local_commiter()
+    email = git.get_local_email()
+    project = project_name()
+    state = env.get('state', 'Unknown')
+
+    avatar_hash = md5(email.strip().lower()).hexdigest()
+    avatar_url = 'https://www.gravatar.com/avatar/{}?s=16'.format(avatar_hash)
+    fallback = "Deploy: {} ({}) by {}".format(project, state, deployer)
+
+    return {
+        'fallback': fallback,
+        'color': '#439FE0',
+        'title': title,
+        'text': u'_Revision: {}_' if revision else None,
+        'author_name': deployer,
+        'author_icon': avatar_url,
+        'ts': int(time()),
+        'fields': [
+            {'title': 'Project', 'value': project, 'short': True},
+            {'title': 'Environment', 'value': state, 'short': True}
+        ]
+    }
+
+
+def notify_deploy_start():
+    """
+    Send a message to slack about the start of a deployment
+
+    :return str: plaintext message part
+    """
+    message = 'Deploy started'
+    summary = _deploy_summary()
+    summary["color"] = "warning"
+
+    slack.notify(message, summary)
+    return message
+
+
+def notify_deploy_finish():
+    """
+    Send a message to slack about the end of a deployment
+
+    :return str: plaintext message part
+    """
+    message = 'Deploy Succeeded'
+    summary = _deploy_summary()
+    summary["color"] = "good"
+
+    slack.notify(message, summary)
+    return message
+
+
+def notify_deploy_event(commits=None):
+    """
+    Send a message to slack about a successful deployment
+
+    :return str: formatted message
+    """
+    from .project import project_name, git_repository_path, github_link
+
+    msg = u'*{project}* (*{state}*)'
+
+    if commits:
+        msg += u' deployed `<{base_url}/compare/{old}...{new}|{old} → {new}>`'
+    else:
+        msg += u' reset to `<{base_url}/commit/{commit}|{commit}>`'
+
+    msg += u' on `{host}`'
+
+    old_commit, new_commit = commits or (None, None)
+    commit = commits or git.get_commit(repository_path=git_repository_path(), short=True)
+    msg = msg.format(
+        project=project_name(),
+        base_url=github_link(),
+        state=env.get('state', 'unknown'),
+        old=old_commit,
+        new=new_commit,
+        commit=commit,
+        host=env['host_string']
+    )
+
+    slack.notify(msg)
+    return msg
