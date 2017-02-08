@@ -74,11 +74,11 @@ Application Blueprint
 from refabric.contrib import blueprints
 blueprint = blueprints.get(__name__)
 
-from .application.tasks import setup, configure, deploy, deployed, start, stop,\
-    reload, status, configure_providers, generate_nginx_conf, install_requirements
+from .application.tasks import setup, configure, deploy, deployed, incoming, \
+    start, stop, reload, status, configure_providers, generate_nginx_conf, install_requirements
 
 from .application.deploy import update_source
 
-__all__ = ['setup', 'configure', 'deploy', 'deployed', 'start', 'stop',
-           'reload', 'status', 'configure_providers', 'generate_nginx_conf',
-           'install_requirements', 'update_source']
+__all__ = ['setup', 'configure', 'deploy', 'deployed', 'incoming',
+           'start', 'stop', 'reload', 'status', 'configure_providers',
+           'generate_nginx_conf', 'install_requirements', 'update_source']

@@ -139,6 +139,36 @@ def deployed():
 
 
 @task
+def incoming(revision=None):
+    """
+    Show changes since the deployed revision
+    """
+    from .project import sudo_project, git_repository_path
+
+    with sudo_project():
+        repository_path = git_repository_path()
+        git.fetch(repository_path)
+
+        current_revision, head_message = git.log(repository_path)[0]
+
+        if not revision:
+            origin = git.get_origin(repository_path)
+            revision, _ = git.log(repository_path, refspec=origin)[0]
+
+        if current_revision == revision:
+            info("No changes detected")
+            return None
+
+        refspec = '{0}..{1}'.format(current_revision, revision)
+        git_log = git.log(repository_path, refspec=refspec, count=False, author=True)
+
+        info(u'Changes since deploy:\n{}',
+             u'\n'.join([u' :: '.join(row) for row in git_log]))
+
+        return git_log
+
+
+@task
 def start():
     """
     Start all application providers on current host

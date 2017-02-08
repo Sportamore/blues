@@ -415,33 +415,47 @@ def _deploy_summary(title, revision):
     avatar_url = 'https://www.gravatar.com/avatar/{}?s=16'.format(avatar_hash)
     fallback = "Deploy: {} ({}) by {}".format(project, state, deployer)
 
-    return {
+    summary = {
         'fallback': fallback,
         'color': '#439FE0',
-        'title': title,
-        'text': u'_Revision: {}_' if revision else None,
         'author_name': deployer,
         'author_icon': avatar_url,
-        'ts': int(time()),
+        # 'ts': int(time()),
+        'title': u'{} ({})'.format(project, state),
         'fields': [
-            {'title': 'Project', 'value': project, 'short': True},
-            {'title': 'Environment', 'value': state, 'short': True}
-        ]
+            {'title': 'Label', 'value': title, 'short': True}
+        ],
+        'mrkdwn_in': ['text', 'fields']
     }
 
+    if revision:
+        summary['fields'].append({
+            'title': 'revision',
+            'value': '_{}_'.format(revision),
+            'short': True
+        })
 
-def notify_start(title, revision=None):
+    return summary
+
+
+def notify_start(title, revision=None, changes=None):
     """
     Send a message to slack about the start of a deployment
 
     :return str: plaintext message part
     """
-    message = 'Deploy started'
     summary = _deploy_summary(title, revision)
     summary["color"] = "warning"
 
-    slack.notify(message, summary)
-    return message
+    if len(changes):
+        formatted_changes = [u'`{}` {}'.format(rev, msg) for rev, msg in changes]
+        summary['fields'].append({
+            'title': 'Changes',
+            'value': u'\n'.join(formatted_changes),
+            'short': False
+        })
+
+    slack.notify(None, summary)
 
 
 def notify_finish(title, revision=None):
@@ -450,12 +464,10 @@ def notify_finish(title, revision=None):
 
     :return str: plaintext message part
     """
-    message = 'Deploy Succeeded'
     summary = _deploy_summary(title, revision)
     summary["color"] = "good"
 
-    slack.notify(message, summary)
-    return message
+    slack.notify(None, summary)
 
 
 def notify_event(commits=None):
