@@ -14,6 +14,9 @@ Postgres Blueprint
         version: 9.3           # PostgreSQL version (required)
         # bind: *              # What IP address(es) to listen on, use '*' for all (Default: localhost)
         # allow: 10.0.0.0/24   # Additionally allow connections from netmask (Default: 127.0.0.1/32)
+        wal_level: minimal     # wal_level: minimal (default), archive, hot_standby, or logical
+        max_wal_senders: 2     # max number of walsender processes
+        wal_keep_segments: 16  # wal_keep_segments: in logfile segments, 16MB each; 0 disables
         schemas:
           some_schema_name:    # The schema name
             user: foo          # Username to connect to schema
@@ -105,7 +108,10 @@ def configure():
     """
     context = {
         'listen_addresses': blueprint.get('bind', 'localhost'),
-        'host_all_allow': blueprint.get('allow', None)
+        'host_all_allow': blueprint.get('allow', None),
+        'wal_level': blueprint.get('wal_level', 'minimal'),
+        'max_wal_senders': blueprint.get('max_wal_senders', 2),
+        'wal_keep_segments': blueprint.get('wal_keep_segments', 16),
     }
     updates = [
         blueprint.upload(os.path.join('.', 'pg_hba.conf'),
