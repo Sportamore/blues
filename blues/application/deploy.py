@@ -444,11 +444,17 @@ def notify_start(title, revision=None, changes=None):
 
     :return str: plaintext message part
     """
+    from .project import github_link
+
     summary = _deploy_summary(title, revision)
     summary["color"] = "warning"
 
     if len(changes):
-        formatted_changes = [u'`{}` {}'.format(rev, msg) for rev, msg in changes]
+        base_url = github_link()
+        log_template = u'`<{base_url}/commit/{rev}|{rev}>` {msg}'
+        formatted_changes = [log_template.format(base_url=base_url, rev=rev, msg=msg)
+                             for rev, msg in changes]
+
         summary['fields'].append({
             'title': 'Changes',
             'value': u'\n'.join(formatted_changes),
