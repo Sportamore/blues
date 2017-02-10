@@ -449,7 +449,7 @@ def notify_start(title, revision=None, changes=None):
     summary = _deploy_summary(title, revision)
     summary["color"] = "warning"
 
-    if len(changes):
+    if changes:
         base_url = github_link()
         log_template = u'`<{base_url}/commit/{rev}|{rev}>` {msg}'
         formatted_changes = [log_template.format(base_url=base_url, rev=rev, msg=msg)
