@@ -1,8 +1,8 @@
 ## Pre-flight checks
 # Test for an interactive shell.
 if [[ $- != *i* ]] ; then
-        # Shell is non-interactive.  Be done now!
-        return
+    # Shell is non-interactive.  Be done now!
+    return
 fi
 
 # append to the history file, don't overwrite it
@@ -53,8 +53,6 @@ fi
 
 ## logic
 function prompt_cmd_venv {
-    [[ $PROMPT_VIRTUALENV -eq 1 ]] || exit 0
-
     [[ -n "${VIRTUAL_ENV}" ]] \
     && echo "${COLOR_NONE}:${COLOR_WHITE}${VIRTUAL_ENV##*/}${COLOR_NONE}"
 }
