@@ -75,10 +75,13 @@ from refabric.contrib import blueprints
 blueprint = blueprints.get(__name__)
 
 from .application.tasks import setup, configure, deploy, deployed, incoming, \
-    start, stop, reload, status, configure_providers, generate_nginx_conf, install_requirements
+    start, stop, reload, status, configure_providers, generate_nginx_conf, \
+    install_requirements, configure_environment
 
 from .application.deploy import update_source
 
 __all__ = ['setup', 'configure', 'deploy', 'deployed', 'incoming',
            'start', 'stop', 'reload', 'status', 'configure_providers',
-           'generate_nginx_conf', 'install_requirements', 'update_source']
+           'generate_nginx_conf', 'install_requirements', 'update_source',
+           'configure_environment']
+

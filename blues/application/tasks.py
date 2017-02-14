@@ -229,7 +229,20 @@ def configure_providers(force_reload=False):
         if provider.updates or force_reload:
             provider.reload()
 
+    # This may become a real provider in the future.
+    configure_environment()
     return providers
+
+
+@task
+def configure_environment():
+    from .project import project_home, project_name, sudo_project
+
+    context = {"project_name": project_name()}
+    blueprint.upload('dotenv/dotenv',
+                     os.path.join(project_home(), '.env'),
+                     context=context,
+                     user=project_name())
 
 
 @task

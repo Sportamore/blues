@@ -14,6 +14,9 @@ Postgres Blueprint
         version: 9.3           # PostgreSQL version (required)
         # bind: *              # What IP address(es) to listen on, use '*' for all (Default: localhost)
         # allow: 10.0.0.0/24   # Additionally allow connections from netmask (Default: 127.0.0.1/32)
+        wal_level: minimal     # wal_level: minimal (default), archive, hot_standby, or logical
+        max_wal_senders: 2     # max number of walsender processes
+        wal_keep_segments: 16  # wal_keep_segments: in logfile segments, 16MB each; 0 disables
         schemas:
           some_schema_name:    # The schema name
             user: foo          # Username to connect to schema
@@ -26,7 +29,6 @@ from datetime import datetime
 from fabric.contrib import files
 from fabric.decorators import task
 from fabric.operations import prompt
-from fabric.state import env
 
 from refabric.api import run, info
 from refabric.context_managers import sudo, silent
@@ -35,7 +37,7 @@ from refabric.contrib import blueprints
 from . import debian
 
 __all__ = ['start', 'stop', 'restart', 'reload', 'setup', 'configure',
-           'setup_schemas', 'generate_pgtune_conf', 'dump']
+           'setup_schemas', 'dump', 'status']
 
 
 blueprint = blueprints.get(__name__)
@@ -44,35 +46,34 @@ start = debian.service_task('postgresql', 'start')
 stop = debian.service_task('postgresql', 'stop')
 restart = debian.service_task('postgresql', 'restart')
 reload = debian.service_task('postgresql', 'reload')
+status = debian.service_task('postgresql', 'status', show_output=True)
 
 version = lambda: blueprint.get('version', '9.1')
 postgres_root = lambda *a: os.path.join('/etc/postgresql/{}/main/'.format(version()), *a)
 
 
-def install(add_repo=None):
-    with sudo():
-        v = version()
-        if add_repo is None:
-            add_repo = (debian.lsb_release() == '14.04' and
-                        tuple(map(int, str(v).split('.'))) >= (9, 4))
-        if add_repo:
-            add_repository()
-
-        debian.apt_get('install',
-                       'postgresql',
-                       'postgresql-server-dev-{}'.format(v),
-                       'libpq-dev',
-                       'postgresql-contrib-{}'.format(v),
-                       'pgtune')
-
-
 def add_repository():
     name = debian.lsb_codename()
     info('Adding postgres {} apt repository...', name)
-    repo = 'https://apt.postgresql.org/pub/repos/apt/ {}-pgdg main'.format(name)
+    repo = 'deb https://apt.postgresql.org/pub/repos/apt/ {}-pgdg main'.format(name)
     debian.add_apt_key('https://www.postgresql.org/media/keys/ACCC4CF8.asc')
-    debian.add_apt_repository(repository=repo)
+    debian.add_apt_repository(repository=repo, src=True)
     debian.apt_get_update()
+
+
+def install():
+    with sudo():
+        v = version()
+        add_repository()
+
+        packages = [
+            'postgresql-{}'.format(v),
+            'postgresql-server-dev-{}'.format(v),
+            'libpq-dev',
+            'postgresql-contrib-{}'.format(v),
+        ]
+        debian.apt_get('install', *packages)
+        debian.add_rc_service('postgresql')
 
 
 def install_postgis(v=None):
@@ -83,8 +84,9 @@ def install_postgis(v=None):
     debian.apt_get('install', 'postgis',
                    'postgresql-{}-postgis-scripts'.format(v))
 
+
 @task
-def setup():
+def setup(drop=False):
     """
     Install, configure Postgresql and create schemas
     """
@@ -92,29 +94,26 @@ def setup():
     # Bump shared memory limits
     setup_shared_memory()
 
-    # Generate pgtune.conf
-    generate_pgtune_conf()
-
     # Upload templates
     configure()
 
     # Create schemas and related users
-    setup_schemas()
+    setup_schemas(drop=drop)
 
 
 @task
 def configure():
     """
-    Configure Postgresql
+    Configure Postgresql, start service if not running, restart if reconfigured
     """
     context = {
         'listen_addresses': blueprint.get('bind', 'localhost'),
-        'host_all_allow': blueprint.get('allow', None)
+        'host_all_allow': blueprint.get('allow', None),
+        'wal_level': blueprint.get('wal_level', 'minimal'),
+        'max_wal_senders': blueprint.get('max_wal_senders', 2),
+        'wal_keep_segments': blueprint.get('wal_keep_segments', 16),
     }
     updates = [
-        blueprint.upload(os.path.join('.', 'pgtune.conf'),
-                         postgres_root(),
-                         user='postgres'),
         blueprint.upload(os.path.join('.', 'pg_hba.conf'),
                          postgres_root(),
                          context=context,
@@ -128,6 +127,8 @@ def configure():
 
     if any(updates):
         restart()
+    elif not(status()):
+        start()
 
 
 @task
@@ -196,56 +197,6 @@ def setup_shared_memory():
             run('sysctl -p')
         info('Added **{}** to {}', shmmax_str, sysctl_path)
         info('Added **{}** to {}', shmall_str, sysctl_path)
-
-
-@task
-def generate_pgtune_conf(role='db', **options):
-    """
-    Run pgtune and create pgtune.conf
-
-    :param role: Which fabric role to place local pgtune.conf template under
-    """
-
-    options.setdefault('type', 'Web')
-    options = ' '.join(
-        '--{}="{}"'.format(key, value)
-        for key, value in options.items()
-    )
-
-    conf_path = postgres_root('postgresql.conf')
-    with sudo(), silent():
-        output = run('pgtune {} -i {}'.format(options, conf_path)).strip()
-
-        def parse(c):
-            lines = [l for l in c.splitlines() if '# pgtune' in l]
-            for line in lines:
-                try:
-                    comment = line.index('#')
-                    line = line[:comment]
-                except ValueError:
-                    pass
-                clean = lambda s: s.strip('\n\r\t\'" ')
-                key, _, value = line.partition('=')
-                key, value = map(clean, (key, value))
-                if key:
-                    yield key, value or None
-
-        tune_conf = dict(parse(output))
-        tune_conf.update(blueprint.get('pgtune', {}))
-        tune_conf = '\n'.join(' = '.join(item)
-                              for item in tune_conf.iteritems())
-        conf_dir = os.path.join(
-            os.path.dirname(env['real_fabfile']),
-            'templates',
-            role,
-            'postgres')
-        conf_path = os.path.join(conf_dir, 'pgtune.conf')
-
-        if not os.path.exists(conf_dir):
-            os.makedirs(conf_dir)
-
-        with open(conf_path, 'w+') as f:
-            f.write(tune_conf)
 
 
 @task
