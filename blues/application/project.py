@@ -1,3 +1,5 @@
+# coding=utf-8
+
 import os
 import re
 from contextlib import contextmanager
@@ -13,7 +15,7 @@ __all__ = [
     'app_root', 'project_home', 'git_root', 'use_virtualenv', 'virtualenv_path',
     'git_repository', 'git_repository_path', 'python_path', 'sudo_project',
     'requirements_txt', 'use_python', 'static_base', 'project_name',
-    'releases', 'remote_head'
+    'releases', 'remote_head', 'github_owner'
 ]
 
 blueprint = blueprints.get('blues.app')
@@ -97,3 +99,36 @@ def remote_head():
 
     branch = repo['branch']
     return ('origin/{}'.format(branch), ls[branch][:7])
+
+
+def github_owner():
+    """
+    Get the account/organization from the project's github url
+
+    :return str: account name
+    """
+    url = git_repository().get('url', '')
+    if not url.startswith('git@github.com:'):
+        return None
+
+    return git.parse_url(url)['gh_owner']
+
+
+def github_link():
+    """
+    Get the HTTP url to the configured github repo
+
+    :return str: repository url
+    """
+    repo = git_repository()
+
+    repo_owner = repo['gh_owner']
+    repo_name = repo['name']
+
+    if repo_name.endswith('.git'):
+        repo_name = repo_name[:-4]
+
+    if not repo_owner and repo_name:
+        return None
+
+    return 'https://github.com/{}/{}'.format(repo_owner, repo_name)

@@ -14,7 +14,6 @@ from refabric.contrib import blueprints
 
 
 from .. import git
-from .. import slack
 
 blueprint = blueprints.get('blues.app')
 
@@ -140,6 +139,36 @@ def deployed():
 
 
 @task
+def incoming(revision=None):
+    """
+    Show changes since the deployed revision
+    """
+    from .project import sudo_project, git_repository_path
+
+    with sudo_project():
+        repository_path = git_repository_path()
+        git.fetch(repository_path)
+
+        current_revision, head_message = git.log(repository_path)[0]
+
+        if not revision:
+            origin = git.get_origin(repository_path)
+            revision, _ = git.log(repository_path, refspec=origin)[0]
+
+        if current_revision == revision:
+            info("No changes detected")
+            return None
+
+        refspec = '{0}..{1}'.format(current_revision, revision)
+        git_log = git.log(repository_path, refspec=refspec, count=False, author=True)
+
+        info(u'Changes since deploy:\n{}',
+             u'\n'.join([u' :: '.join(row) for row in git_log]))
+
+        return git_log
+
+
+@task
 def start():
     """
     Start all application providers on current host
@@ -257,112 +286,3 @@ def generate_nginx_conf(role='www'):
 
     with open(conf_path, 'w+') as f:
         f.write(conf)
-
-
-def get_github_owner():
-    """
-    Get the account/organization from the project's github url
-
-    :return str: account name
-    """
-    from .project import git_repository
-    from ..git import parse_url
-
-    url = git_repository().get('url', '')
-    if not url.startswith('git@github.com:'):
-        return None
-
-    return parse_url(url)['gh_owner']
-
-
-def get_releases():
-    """
-    Alias for project.releases
-    """
-    from .project import releases
-    return releases()
-
-
-def get_remote_head():
-    """
-    Alias for project.remote_head
-    """
-    from .project import remote_head
-    return remote_head()
-
-
-def notify_deploy_start(role=None, notifier=slack.notify, quiet=False):
-    """
-    Send a message to slack about the start of a deployment
-
-    :return str: formatted message
-    """
-    from .project import project_name
-
-    msg = '`{deployer}` started deploying '
-    if role:
-        msg += '`{project}@{state}:{role}` '
-    else:
-        msg += '`{project}@{state}` '
-
-    msg += 'to `{user}@{host}`'
-
-    msg = msg.format(
-        deployer=git.get_local_commiter(),
-        project=project_name(),
-        state=env.get('state', 'unknown'),
-        role=role,
-        user=env['user'],
-        host=env['host_string'],
-    )
-
-    if notifier:
-        notifier(msg, quiet=quiet)
-
-    return msg
-
-
-def notify_deploy(role=None, commits=None, notifier=slack.notify, quiet=False):
-    """
-    Send a message to slack about a successful deployment
-
-    :return str: formatted message
-    """
-    from .project import project_name, git_repository_path
-
-    msg = '`{deployer}` deployed '
-    if role:
-        msg += '`{project}@{state}:{role}` '
-    else:
-        msg += '`{project}@{state}` '
-
-    owner = get_github_owner()
-    if owner:
-        if commits:
-            msg += '`<https://github.com/{owner}/{project}/compare/{from}...{to}|{from}→{to}>` '
-        else:
-            msg += '`<https://github.com/{owner}/{project}/commit/{commit}|{commit}>` '
-    else:
-        if commits:
-            msg += '`{from}→{to}` '
-        else:
-            msg += '`{commit}` '
-
-    msg += 'to `{user}@{host}`'
-
-    from_commit, to_commit = commits or (None, None)
-    commit = commits or git.get_commit(repository_path=git_repository_path(), short=True)
-    variables = {
-        'deployer': git.get_local_commiter(),
-        'project': project_name(),
-        'state': env.get('state', 'unknown'),
-        'role': role,
-        'owner': owner,
-        'from': from_commit,
-        'to': to_commit,
-        'commit': commit,
-        'user': env['user'],
-        'host': env['host_string'],
-    }
-
-    notifier(msg.format(**variables), quiet=quiet)
