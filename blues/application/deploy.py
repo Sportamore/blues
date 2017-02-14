@@ -438,7 +438,7 @@ def _deploy_summary(title, revision):
     return summary
 
 
-def notify_start(title, revision=None, changes=None):
+def notify_start(title, revision=None, changes=None, max_changes=8):
     """
     Send a message to slack about the start of a deployment
 
@@ -453,7 +453,10 @@ def notify_start(title, revision=None, changes=None):
         base_url = github_link()
         log_template = u'`<{base_url}/commit/{rev}|{rev}>` {msg}'
         formatted_changes = [log_template.format(base_url=base_url, rev=rev, msg=msg)
-                             for rev, msg in changes]
+                             for rev, msg in changes[:max_changes]]
+
+        if len(changes) > max_changes:
+            formatted_changes.append('(+ {} more)'.format(len(changes[max_changes:])))
 
         summary['fields'].append({
             'title': 'Changes',
