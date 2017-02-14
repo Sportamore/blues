@@ -1,3 +1,5 @@
+# coding=utf-8
+
 import os
 import pkg_resources
 import re
@@ -21,6 +23,7 @@ from .. import git
 from .. import user
 from .. import python
 from .. import virtualenv
+from .. import slack
 
 __all__ = [
     'install_project',
@@ -32,7 +35,10 @@ __all__ = [
     'install_or_update_source',
     'install_source',
     'update_source',
-    'install_providers'
+    'install_providers',
+    'notify_start',
+    'notify_finish',
+    'notify_event'
 ]
 
 
@@ -393,3 +399,114 @@ def install_providers():
             provider.manager.install()
 
         provider.install()
+
+
+def _deploy_summary(title, revision):
+    from hashlib import md5
+    from time import time
+    from .project import project_name
+
+    deployer = git.get_local_commiter()
+    email = git.get_local_email()
+    project = project_name()
+    state = env.get('state', 'Unknown')
+
+    avatar_hash = md5(email.strip().lower()).hexdigest()
+    avatar_url = 'https://www.gravatar.com/avatar/{}?s=16'.format(avatar_hash)
+    fallback = "Deploy: {} ({}) by {}".format(project, state, deployer)
+
+    summary = {
+        'fallback': fallback,
+        'color': '#439FE0',
+        'author_name': deployer,
+        'author_icon': avatar_url,
+        # 'ts': int(time()),
+        'title': u'{} ({})'.format(project, state),
+        'fields': [
+            {'title': 'Label', 'value': title, 'short': True}
+        ],
+        'mrkdwn_in': ['text', 'fields']
+    }
+
+    if revision:
+        summary['fields'].append({
+            'title': 'revision',
+            'value': '_{}_'.format(revision),
+            'short': True
+        })
+
+    return summary
+
+
+def notify_start(title, revision=None, changes=None, max_changes=8):
+    """
+    Send a message to slack about the start of a deployment
+
+    :return str: plaintext message part
+    """
+    from .project import github_link
+
+    summary = _deploy_summary(title, revision)
+    summary["color"] = "warning"
+
+    if changes:
+        base_url = github_link()
+        log_template = u'`<{base_url}/commit/{rev}|{rev}>` {msg}'
+        formatted_changes = [log_template.format(base_url=base_url, rev=rev, msg=msg)
+                             for rev, msg in changes[:max_changes]]
+
+        if len(changes) > max_changes:
+            formatted_changes.append('(+ {} more)'.format(len(changes[max_changes:])))
+
+        summary['fields'].append({
+            'title': 'Changes',
+            'value': u'\n'.join(formatted_changes),
+            'short': False
+        })
+
+    slack.notify(None, summary)
+
+
+def notify_finish(title, revision=None):
+    """
+    Send a message to slack about the end of a deployment
+
+    :return str: plaintext message part
+    """
+    summary = _deploy_summary(title, revision)
+    summary["color"] = "good"
+
+    slack.notify(None, summary)
+
+
+def notify_event(commits=None):
+    """
+    Send a message to slack about a successful deployment
+
+    :return str: formatted message
+    """
+    from .project import project_name, git_repository_path, github_link
+
+    msg = u'*{project}* (*{state}*)'
+
+    if commits:
+        msg += u' deployed `<{base_url}/compare/{old}...{new}|{old} → {new}>`'
+    else:
+        msg += u' reset to `<{base_url}/commit/{commit}|{commit}>`'
+
+    msg += u' on `{host}`'
+
+    old_commit, new_commit = commits or (None, None)
+    commit = commits or git.get_commit(repository_path=git_repository_path(), short=True)
+    msg = msg.format(
+        project=project_name(),
+        base_url=github_link(),
+        state=env.get('state', 'unknown'),
+        old=old_commit,
+        new=new_commit,
+        commit=commit,
+        host=env['host_string']
+    )
+
+    slack.notify(msg)
+    return msg

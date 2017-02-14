@@ -212,6 +212,15 @@ def get_local_commiter():
     return local('git config user.name', capture=True)
 
 
+def get_local_email():
+    """
+    Retrieves the calling user's git name
+
+    :return str: username
+    """
+    return local('git config user.email', capture=True)
+
+
 def diff_stat(repository_path=None, commit='HEAD^', path=None):
     """
     Get diff stats for path.
