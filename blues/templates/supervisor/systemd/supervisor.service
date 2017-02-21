@@ -1,0 +1,14 @@
+[Unit]
+Description=Supervisord Service
+
+[Service]
+ExecStart=/usr/local/bin/supervisord -n -c /etc/supervisord.conf
+ExecStop=/usr/local/bin/supervisorctl $OPTIONS shutdown
+ExecReload=/usr/local/bin/supervisorctl -c /etc/supervisord.conf $OPTIONS reload
+KillMode=process
+Restart=on-failure
+RestartSec=50s
+
+
+[Install]
+WantedBy=multi-user.target

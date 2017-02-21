@@ -57,6 +57,7 @@ def setup():
     """
     install()
     configure()
+    debian.add_rc_service('supervisor')
 
 
 def install():
@@ -74,7 +75,10 @@ def install():
         info('Installing: {} ({})', 'Supervisor', (version
                                                    if version
                                                    else 'latest'))
-        python.pip('install', package, bin='pip2')
+
+        # Revent versions of uwsgi depends on a modern version of pip ( >=9 )
+        python.update_pip(quiet=True)
+        python.pip('install', package, bin='pip2', quiet=True)
 
         # Create group
         debian.groupadd('app-data', gid_min=10000)
@@ -93,8 +97,14 @@ def configure():
     Enable/disable configured programs
     """
     with sudo():
-        # Upload templates
-        uploads = blueprint.upload('init/', '/etc/init/')
+        # Upload service templates
+        if debian.lsb_release() == '16.04':
+            uploads = blueprint.upload('systemd/supervisor.service', '/etc/systemd/system/supervisor.service')
+            debian.systemd_daemon_reload()
+
+        else:
+            uploads = blueprint.upload('init/supervisor.conf', '/etc/init/supervisor.conf')
+
         uploads.extend(blueprint.upload('supervisord.conf', '/etc/') or [])
         uploads.extend(blueprint.upload('programs-available/',
                                         programs_available_path + '/') or [])

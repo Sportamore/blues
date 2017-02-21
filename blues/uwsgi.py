@@ -61,7 +61,7 @@ def install():
         python.install()
 
         # Revent versions of uwsgi depends on a modern version of pip ( >=9 )
-        python.update_pip()
+        python.update_pip(quiet=True)
 
         # PIP install system wide uWSGI
         package = 'uwsgi'
@@ -69,8 +69,8 @@ def install():
         if version:
             package += '=={}'.format(version)
         info('Installing: {} ({})', 'uWSGI', version if version else 'latest')
-        python.pip('install', package)
-        python.pip('install', 'uwsgitop', 'gevent')
+        python.pip('install', package, quiet=True)
+        python.pip('install', 'uwsgitop', 'gevent', quiet=True)
 
         # Create group
         debian.groupadd('app-data', gid_min=10000)
