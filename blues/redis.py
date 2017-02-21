@@ -84,6 +84,7 @@ def configure():
         config = 'redis-3.conf'
 
     uploads = blueprint.upload(config, '/etc/redis/redis.conf', context)
+    debian.chmod('/etc/redis/redis.conf', mode=640, owner='redis', group='redis')
 
     if uploads:
         restart()
