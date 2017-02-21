@@ -47,9 +47,12 @@ def configure():
 
 
 def install():
+    ver = blueprint.get('version') or ''
+    package_name = 'ruby{}'.format(ver)
+
     with sudo():
-        info('Installing Ruby v1.9.3')
-        debian.apt_get('install', 'ruby1.9.3')
+        info('Installing {}', package_name)
+        debian.apt_get('install', package_name, "{}-dev".format(package_name))
 
     info('Installing Bundler')
     install_gem('bundler')
