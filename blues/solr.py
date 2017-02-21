@@ -47,6 +47,7 @@ def setup():
     """
     install()
     configure()
+    debian.add_rc_service('solr')
 
 
 def install():
@@ -104,9 +105,14 @@ def configure():
     Configure Solr
     """
     updated_confs = blueprint.upload('solr_home/', '/etc/solr/', user='solr')
-    updated_init = blueprint.upload('init/', '/etc/init/', context={
-        'memory': blueprint.get('memory', '512m')
-    })
+
+    context = {'memory': blueprint.get('memory', '512m')}
+    if debian.lsb_release() == '16.04':
+        updated_init = blueprint.upload('systemd/solr.service', '/etc/systemd/system/', context)
+        debian.systemd_daemon_reload()
+
+    else:
+        updated_init = blueprint.upload('init/', '/etc/init/', context)
 
     if updated_confs or updated_init:
         restart()

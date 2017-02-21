@@ -1,0 +1,15 @@
+[Unit]
+Description=Apache SOLR
+After=syslog.target network.target remote-fs.target nss-lookup.target
+
+[Service]
+Environment=ENABLE_REMOTE_JMX_OPTS="true"
+User=solr
+ExecStart=/usr/share/solr/bin/solr start -f -s /etc/solr -m 2048m -a "-Dlog4j.configuration=file:///etc/solr/log4j.properties -XX:+UseGCLogFileRotation -XX:NumberOfGCLogFiles=5 -XX:GCLogFileSize=1M -Xloggc:/var/log/solr/solr_gc.log"
+PIDFile=/opt/solr/bin/solr-8983.pid
+ExecReload=/bin/kill -s HUP $MAINPID
+ExecStop=/bin/kill -s QUIT $MAINPID
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target
