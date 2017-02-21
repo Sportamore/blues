@@ -99,7 +99,7 @@ def install():
 
         # Install package
         info('Installing {}', __name__)
-        debian.apt_get('install', *dependencies)
+        debian.apt_get('--allow-unauthenticated', 'install', *dependencies)
         debian.debconf_communicate('PURGE', server_package)
 
         # Auto-answer mysql_secure_installation prompts
