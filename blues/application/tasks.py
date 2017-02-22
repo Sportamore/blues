@@ -162,6 +162,10 @@ def incoming(revision=None):
         refspec = '{0}..{1}'.format(current_revision, revision)
         git_log = git.log(repository_path, refspec=refspec, count=False, author=True)
 
+        if not git_log:
+            info("Unable to get changelog (possibly different branches)")
+            return None
+
         info(u'Changes since deploy:\n{}',
              u'\n'.join([u' :: '.join(row) for row in git_log]))
 

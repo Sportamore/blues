@@ -450,19 +450,23 @@ def notify_start(title, revision=None, changes=None, max_changes=8):
     summary["color"] = "warning"
 
     if changes:
-        base_url = github_link()
-        log_template = u'`<{base_url}/commit/{rev}|{rev}>` {msg}'
-        formatted_changes = [log_template.format(base_url=base_url, rev=rev, msg=msg)
-                             for rev, msg in changes[:max_changes]]
+        try:
+            base_url = github_link()
+            log_template = u'`<{base_url}/commit/{rev}|{rev}>` {msg}'
+            formatted_changes = [log_template.format(base_url=base_url, rev=rev, msg=msg)
+                                 for rev, msg in changes[:max_changes]]
 
-        if len(changes) > max_changes:
-            formatted_changes.append('(+ {} more)'.format(len(changes[max_changes:])))
+            if len(changes) > max_changes:
+                formatted_changes.append('(+ {} more)'.format(len(changes[max_changes:])))
 
-        summary['fields'].append({
-            'title': 'Changes',
-            'value': u'\n'.join(formatted_changes),
-            'short': False
-        })
+            summary['fields'].append({
+                'title': 'Changes',
+                'value': u'\n'.join(formatted_changes),
+                'short': False
+            })
+
+        except Exception:
+            warn("Changelog formatting failed, skipping")
 
     slack.notify(None, summary)
 

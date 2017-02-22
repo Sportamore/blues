@@ -301,7 +301,7 @@ def log(repository_path=None, refspec='HEAD', count=1, path=None, author=False):
         output = run(cmd, pty=False)
 
         git_log = output.stdout.strip().split('\n')
-        git_log = [row.split(' ', 1) for row in git_log]
+        git_log = [row.strip().split(' ', 1) for row in git_log if row.strip()]
 
     return git_log
 
