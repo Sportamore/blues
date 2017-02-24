@@ -74,16 +74,18 @@ def install():
 
         # Install external PPA
         info('Adding apt key for {}', __name__)
-        run("apt-key adv --keyserver keys.gnupg.net --recv-keys 1C4CBDCDCD2EFD2A")
+        run("apt-key adv --keyserver keys.gnupg.net --recv-keys 1C4CBDCDCD2EFD2A")  # Trusty
+        run("apt-key adv --keyserver keys.gnupg.net --recv-keys 8507EFA5")  # Xenial
 
         info('Adding apt repository for {}', __name__)
-        debian.add_apt_repository('http://repo.percona.com/apt trusty main')
+        debian.add_apt_repository('http://repo.percona.com/apt {} main'.format(debian.lsb_codename()))
         debian.apt_get_update()
 
         # Percona/MySQL base dependencies
         dependencies = (
             'percona-server-server',
             'percona-server-client',
+            'percona-xtrabackup',
             'libmysqlclient-dev',
             'mysqltuner'
         )
@@ -99,7 +101,7 @@ def install():
 
         # Install package
         info('Installing {}', __name__)
-        debian.apt_get('--allow-unauthenticated', 'install', *dependencies)
+        debian.apt_get('install', *dependencies)
         debian.debconf_communicate('PURGE', server_package)
 
         # Auto-answer mysql_secure_installation prompts
@@ -128,6 +130,8 @@ def setup():
     configure()
     # Create schemas and related users
     setup_schemas()
+    # Enable service
+    debian.add_rc_service('mysql')
 
 
 @task
