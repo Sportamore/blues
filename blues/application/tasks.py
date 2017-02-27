@@ -229,24 +229,33 @@ def configure_providers(force_reload=False):
         if 'worker' in providers:
             providers['worker'].configure_worker()
 
+    # This may become a real provider in the future.
+    configure_environment()
+
     for provider in set(providers.values()):
         if provider.updates or force_reload:
             provider.reload()
 
-    # This may become a real provider in the future.
-    configure_environment()
     return providers
 
 
 @task
 def configure_environment():
-    from .project import project_home, project_name, sudo_project
+    from .project import project_home, project_name, sudo_project, git_repository_path
 
     context = {"project_name": project_name()}
     blueprint.upload('dotenv/dotenv',
                      os.path.join(project_home(), '.env'),
                      context=context,
                      user=project_name())
+
+    config = blueprint.get('config', None)
+    if config:
+        context.update(config=config)
+        blueprint.upload('dotenv/dotconf',
+                         os.path.join(git_repository_path(), '.env'),
+                         context=context,
+                         user=project_name())
 
 
 @task

@@ -1,0 +1,4 @@
+# Config for {{ project_name }}
+{% if config -%}{% for key, value in config.iteritems() %}
+{{ key }}="{{ value }}"
+{%- endfor %}{%- endif %}
