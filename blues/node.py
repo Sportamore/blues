@@ -18,11 +18,12 @@ Node.js Blueprint
           # - less
 
 """
-import os
+
 
 from fabric.contrib import files
 from fabric.context_managers import cd, prefix
 from fabric.decorators import task
+from fabric.utils import abort, warn
 
 from refabric.api import info
 from refabric.context_managers import sudo
@@ -53,95 +54,45 @@ def setup():
 @task
 def configure():
     """
-    Install npm packages and, if bower is in the packages,
-    install bower dependencies.
+    Install npm packages
     """
     install_packages()
-    install_dependencies()
 
 
 def get_version():
-    return blueprint.get('version')
+    """
+    Support only major versions, since it affects which repository to add.
+    """
+    version = blueprint.get('version')
+    if version in range(4, 8):
+        return version
+
+    else:
+        abort('Unsupported node version: {}'.format(version))
 
 
 def install(for_user=None):
-    version = get_version()
+    info('Installing node from apt')
 
-    if version == 'latest':
-        info('Installing latest node from tarball', )
-        with sudo():
-            install_node_build_deps()
-
-        if for_user is not None:
-            cm = sudo(user=for_user)
-        else:
-            cm = None
-
-        with maybe_managed(cm):
-            return install_latest()
-
-    else:
-        info('Installing node from apt')
-        return install_deb()
-
-
-def install_node_build_deps():
-    info('Installing build tools')
-    debian.apt_get_update()
-    debian.apt_get('install', 'build-essential node-rimraf')
-
-
-def install_latest():
-    info('Installing latest node and NPM for {user}', user=run('whoami').stdout)
-
-    common = [
-        'set -x',
-        'set -o verbose',
-        'eval PREFIX=~/.local',
-        'eval PROFILE=~/.bash_profile',
-        'eval SRC=~/node-latest-install',
-        'source $PROFILE',
-    ]
-
-    setup_env = [
-        'echo \'export PATH=$HOME/.local/bin:$PATH\' >> $PROFILE',
-        'echo \'export npm_config_userconfig=$HOME/.config/npmrc\' >> $PROFILE',
-        'source $PROFILE',
-        'mkdir $PREFIX || true',
-        'mkdir $SRC || true'
-    ]
-
-    run(' && '.join(common + setup_env), shell=True)
-
-    install_node_and_npm = [
-        'cd $SRC',
-        ('curl -z node-latest.tar.gz'
-         ' -O http://nodejs.org/dist/node-latest.tar.gz'),
-        'tar xz --strip-components=1 --file node-latest.tar.gz',
-        './configure --prefix=$PREFIX',
-        'make install',
-        'curl -L https://www.npmjs.org/install.sh | sh'
-    ]
-
-    run(' && '.join(common + install_node_and_npm), shell=True)
-
-
-def install_deb():
     with sudo():
-        lbs_release = debian.lbs_release()
+        lsb_release = debian.lsb_release()
+        codename = debian.lsb_codename()
+        version = get_version()
 
-        # 12.04 ships with really old nodejs, TODO: 14.04?
-        if lbs_release in ['10.04', '12.04']:
-            info('Adding ppa...')
-            debian.add_apt_ppa('chris-lea/node.js', src=True)
+        if lsb_release in ('14.04', '16.04'):
 
-        info('Installing Node.js')
+            repository = 'https://deb.nodesource.com/node_{}.x {} main'.format(version, codename)
+            debian.add_apt_repository(repository)
+
+        else:
+            abort('Unsupported OS version: {}'.format(lsb_release))
+
+        info('Adding apt key for', 'nodesource')
+        debian.add_apt_key('https://deb.nodesource.com/gpgkey/nodesource.gpg.key')
+        debian.apt_get_update()
+
+        info('Installing Node')
         debian.apt_get('install', 'nodejs')
-
-        if lbs_release == '14.04':
-            info('Installing NPM')
-            debian.apt_get('install', 'npm')
-            debian.ln('/usr/bin/nodejs', '/usr/bin/node')
 
 
 def install_packages():
@@ -155,21 +106,3 @@ def npm(command, *options):
     info('Running npm {}', command)
     with sudo():
         run('npm {} -g {}'.format(command, ' '.join(options)))
-
-
-def install_dependencies(path=None, production=True):
-    """
-    Install dependencies from "package.json" at path.
-
-    :param path: Package path, current directory if None. [default: None]
-    :return:
-    """
-
-    dependency_path_root = path or git_repository_path()
-
-    if not files.exists(os.path.join(dependency_path_root, 'package.json')):
-        return
-
-    with sudo_project(), cd(dependency_path_root):
-        run('npm install' + (' --production' if production else ''))
-        run('test -f bower.json && bower install --config.interactive=false')
