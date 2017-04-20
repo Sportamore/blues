@@ -298,10 +298,15 @@ def log(repository_path=None, refspec='HEAD', count=1, path=None, author=False):
         if path:
             cmd += ' -- {}'.format(path)
 
-        output = run(cmd, pty=False)
+        try:
+            output = run(cmd, pty=False)
 
-        git_log = output.stdout.strip().split('\n')
-        git_log = [row.strip().split(' ', 1) for row in git_log if row.strip()]
+            git_log = output.stdout.decode('utf-8').strip().split('\n')
+            git_log = [row.strip().split(' ', 1) for row in git_log if row.strip()]
+
+        except Exception:
+            warn("Unable to parse git log")
+            return u''
 
     return git_log
 
