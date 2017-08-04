@@ -261,13 +261,13 @@ def configure_environment():
 
 @task
 def configure_beat_schedule():
-    from .project import project_name, git_repository_path
+    from .project import project_home, project_name
 
-    beat_schedule = blueprint.get('beat_schedule', None)
-    if beat_schedule:
+    schedule = blueprint.get('schedule', None)
+    if schedule:
         blueprint.upload('beat/schedule',
-                         os.path.join(git_repository_path(), '.beat_schedule'),
-                         context={'beat_schedule': yaml.dump(beat_schedule)},
+                         os.path.join(project_home(), '.schedule'),
+                         context={'schedule': yaml.dump(schedule)},
                          user=project_name())
 
 
