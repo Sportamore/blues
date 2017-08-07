@@ -33,7 +33,7 @@ class CeleryProvider(ManagedProvider):
         context.update(blueprint.get('worker'))
 
         context['celery_group'] = (
-            context.get('queues', []) + context.get('extensions', []))
+            context.get('queues', {}).keys() + context.get('extensions', []))
 
         return context
 
