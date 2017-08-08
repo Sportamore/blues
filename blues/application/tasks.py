@@ -1,7 +1,8 @@
 # coding=utf-8
-
 import os
 import re
+
+import yaml
 
 from fabric.context_managers import settings
 from fabric.decorators import task
@@ -255,6 +256,18 @@ def configure_environment():
         blueprint.upload('dotenv/dotconf',
                          os.path.join(git_repository_path(), '.env'),
                          context=context,
+                         user=project_name())
+
+
+@task
+def configure_beat_schedule():
+    from .project import project_home, project_name
+
+    schedule = blueprint.get('schedule', None)
+    if schedule:
+        blueprint.upload('beat/schedule',
+                         os.path.join(project_home(), '.schedule'),
+                         context={'schedule': yaml.dump(schedule)},
                          user=project_name())
 
 

@@ -26,30 +26,34 @@ class CeleryProvider(ManagedProvider):
         context = super(CeleryProvider, self).get_context()
         context.update({
             'workers': blueprint.get('worker.workers', debian.nproc()),
+            'extensions': self.get_extensions(),
         })
 
         # Override context defaults with blueprint settings
         context.update(blueprint.get('worker'))
 
+        context['celery_group'] = (
+            context.get('queues', {}).keys() + context.get('extensions', []))
+
         return context
 
     def reload(self):
-        self.manager.reload('celery_worker:*')
+        self.manager.reload('celery:*')
         for extension in self.get_extensions():
             self.manager.reload(extension)
 
     def start(self):
-        self.manager.start('celery_worker:*')
+        self.manager.start('celery:*')
         for extension in self.get_extensions():
             self.manager.start(extension)
 
     def stop(self):
-        self.manager.stop('celery_worker:*')
+        self.manager.stop('celery:*')
         for extension in self.get_extensions():
             self.manager.stop(extension)
 
     def status(self, project=None):
-        self.manager.status('celery_worker:*')
+        self.manager.status('celery:*')
         for extension in self.get_extensions():
             self.manager.status(extension)
 
@@ -82,20 +86,15 @@ class CeleryProvider(ManagedProvider):
     def configure(self):
         context = self.get_context()
 
-        programs = ['celery.conf']
-        programs.extend(['{}.conf'.format(name)
-                         for name in self.get_extensions()])
+        template = 'supervisor/default/celery.conf'
+        if not hasattr(self.manager, '_upload_provider_template'):
+            raise Exception('the celery provider only works with the '
+                            'supervisor manager as of now.')
 
-        for program in programs:
-            template = os.path.join('supervisor', 'default', program)
-            if not hasattr(self.manager, '_upload_provider_template'):
-                raise Exception('the celery provider only works with the '
-                                'supervisor manager as of now.')
-
-            self.updates.extend(
-                self.manager._upload_provider_template(
-                    template,
-                    context,
-                    program))
+        self.updates.extend(
+            self.manager._upload_provider_template(
+                template,
+                context,
+                'celery.conf'))
 
         return self.updates
