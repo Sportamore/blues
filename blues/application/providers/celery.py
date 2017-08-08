@@ -39,41 +39,24 @@ class CeleryProvider(ManagedProvider):
 
     def reload(self):
         self.manager.reload('celery:*')
-        for extension in self.get_extensions():
-            self.manager.reload(extension)
 
     def start(self):
         self.manager.start('celery:*')
-        for extension in self.get_extensions():
-            self.manager.start(extension)
 
     def stop(self):
         self.manager.stop('celery:*')
-        for extension in self.get_extensions():
-            self.manager.stop(extension)
 
     def status(self, project=None):
         self.manager.status('celery:*')
-        for extension in self.get_extensions():
-            self.manager.status(extension)
 
     @staticmethod
     def get_extensions():
-        # Filter program extensions by host
-        enabled_extensions = []
-
-        extensions = blueprint.get('worker.celery.extensions')
-        if isinstance(extensions, list):
-            # Filter or bad values
-            extensions = [extension for extension in extensions if extension]
-            for extension in extensions:
-                enabled_extensions.append(extension)
-        elif isinstance(extensions, dict):
-            for extension, extension_host in extensions.items():
-                if extension_host in ('*', env.host_string):
-                    enabled_extensions.append(extension)
-
-        return enabled_extensions
+        # Filter or bad values
+        return [
+            extension
+            for extension in blueprint.get('worker.celery.extensions', [])
+            if extension in {'beat', 'flower'}
+        ]
 
     def configure_worker(self):
         """
