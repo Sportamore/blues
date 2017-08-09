@@ -29,7 +29,7 @@ class CeleryProvider(ManagedProvider):
 
         context['celery_group'] = (
             # queues or fallback worker + extensions
-            ('worker' if fallback else context.get('queues', {}).keys()) +
+            (['worker'] if fallback else context.get('queues', {}).keys()) +
             context.get('extensions', [])
         )
 
