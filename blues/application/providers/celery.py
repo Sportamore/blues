@@ -27,11 +27,12 @@ class CeleryProvider(ManagedProvider):
 
         context['fallback'] = fallback = 'queues' not in context
 
-        context['celery_group'] = (
-            # queues or fallback worker + extensions
-            (['worker'] if fallback else context.get('queues', {}).keys()) +
-            context.get('extensions', [])
-        )
+        # Find and add programs to group
+        context['celery_group'] = context.get('extensions', [])
+        if fallback:
+            context['celery_group'].append('worker')
+        else:
+            context['celery_group'] += (context.get('queues') or {}).keys()
 
         return context
 
