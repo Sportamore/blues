@@ -1,11 +1,4 @@
-import os
-
-from fabric.state import env
-from fabric.context_managers import settings
-
 from .base import ManagedProvider
-from ..managers.supervisor import SupervisorManager
-from ..project import *
 
 from ... import debian
 from ...app import blueprint
@@ -32,8 +25,13 @@ class CeleryProvider(ManagedProvider):
         # Override context defaults with blueprint settings
         context.update(blueprint.get('worker'))
 
+        context['fallback'] = fallback = 'queues' not in context
+
         context['celery_group'] = (
-            context.get('queues', {}).keys() + context.get('extensions', []))
+            # queues or fallback worker + extensions
+            ('worker' if fallback else context.get('queues', {}).keys()) +
+            context.get('extensions', [])
+        )
 
         return context
 
