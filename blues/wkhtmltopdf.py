@@ -42,8 +42,8 @@ def install():
     wkhtmltox_short_ver = '.'.join(wkhtmltox_long_ver.split('.')[:2])
     wkhtmltox_pkg = 'wkhtmltox-{}_linux-{}-amd64.deb'.format(
         wkhtmltox_long_ver, debian.lbs_codename())
-    wkhtmltox_url = 'http://download.gna.org/wkhtmltopdf/{}/{}/{}'.format(
-        wkhtmltox_short_ver, wkhtmltox_long_ver, wkhtmltox_pkg)
+    wkhtmltox_url = 'https://github.com/wkhtmltopdf/wkhtmltopdf/releases/download/{}/{}'.format(
+        wkhtmltox_long_ver, wkhtmltox_pkg)
     run('curl --silent --location --show-error --remote-name "{}"'.format(
         wkhtmltox_url))
     with sudo():
