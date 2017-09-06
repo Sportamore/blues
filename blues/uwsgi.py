@@ -93,6 +93,8 @@ def configure():
 
         else:
             blueprint.upload('init/uwsgi.conf', '/etc/init/uwsgi.conf')
+            blueprint.upload('init.d/uwsgi','/etc/init.d/uwsgi')
+            debian.chmod('/etc/init.d/uwsgi',mode=755)
 
 
 @task
