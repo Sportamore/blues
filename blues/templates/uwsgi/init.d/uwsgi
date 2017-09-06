@@ -1,0 +1,85 @@
+#!/bin/bash
+
+### BEGIN INIT INFO
+# Provides: uwsgi
+# Required-Start: $local_fs $remote_fs $network
+# Required-Stop: $local_fs $remote_fs $network
+# Default-Start: 2 3 4 5
+# Short-Description: start and stop uwsgi
+### END INIT INFO
+
+# Source function library
+#Import of killprocs and other functions
+. /lib/lsb/init-functions
+
+uwsgi=${UWSGI-/usr/local/bin/uwsgi}
+prog=`/bin/basename $uwsgi`
+pidfile=${PIDFILE-/run/uwsgi/*.pid}
+RETVAL=0
+
+
+EMPEROR={{ settings.emperor|default('/srv/app/*/uwsgi.d/') }}
+LOGTO=/var/log/uwsgi/emperor.log
+UWSGI_COMMAND="uwsgi"
+
+check_for_upstart() {
+    if init_is_upstart; then
+    exit $1
+    fi
+}
+
+start() {
+    check_for_upstart 1
+    echo -n $"Starting $prog: "
+    exec $UWSGI_COMMAND --emperor $EMPEROR --logto $LOGTO
+    daemon ${uwsgi} --pidfile ${pidfile} ${UWSGI_OPTIONS} 
+    RETVAL=$?
+    echo
+    [ $RETVAL = 0 ] 
+    return $RETVAL
+}
+
+stop() {
+    check_for_upstart 0
+    echo -n $"Stopping $prog: "
+    killproc -p ${pidfile} ${prog}
+    RETVAL=$?
+    echo
+    [ $RETVAL = 0 ] && rm -rf  ${pidfile}
+}
+
+reload() {
+    echo -n $"Reloading $prog" 
+    killproc -p ${pidfile} ${prog} -HUP
+    RETVAL=$?
+    echo
+}
+
+rh_status() {
+    status -p ${pidfile} ${uwsgi}
+}
+
+case "$1" in
+  start)
+	start
+	;;
+  stop)
+        stop
+        ;;
+  reload)
+        reload
+        ;;
+  restart)
+	stop
+        start
+        ;;
+  status)  
+        rh_status
+        RETVAL=$?
+        ;;
+  *)  
+        echo $"Usage: $prog {start|stop|restart|reload|status}"
+	RETVAL=2   
+esac
+
+exit $RETVAL
