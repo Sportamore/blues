@@ -13,7 +13,7 @@
 . /lib/lsb/init-functions
 
 supervisord=${SUPERVISORD-/usr/local/bin/supervisord}
-prog=`/bin/basename $supervisord`
+prog=`/usr/bin/basename $supervisord`
 pidfile=${PIDFILE-/run/supervisord/supervisord.pid}
 RETVAL=0
 
