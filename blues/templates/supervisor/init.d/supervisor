@@ -1,0 +1,85 @@
+#!/bin/bash
+
+### BEGIN INIT INFO
+# Provides: supervisor
+# Required-Start: $local_fs $remote_fs $network
+# Required-Stop: $local_fs $remote_fs $network
+# Default-Start: 2 3 4 5
+# Short-Description: start and stop supervisor
+### END INIT INFO
+
+# Source function library
+#Import of killprocs and other functions
+. /lib/lsb/init-functions
+
+supervisord=${SUPERVISORD-/usr/local/bin/supervisord}
+prog=`/bin/basename $supervisord`
+pidfile=${PIDFILE-/run/supervisord/supervisord.pid}
+RETVAL=0
+
+DAEMON="--nodaemon"
+CONFIGURATION=/etc/supervisord.conf
+SUPERVISORD_COMMAND="supervisord"
+
+check_for_upstart() {
+    if init_is_upstart; then
+    exit $1
+    fi
+}
+
+start() {
+    check_for_upstart 1
+    echo -n $"Starting $prog: "
+    mkdir -p -m 1775 /run/supervisord/
+    chown root:app-data /run/supervisord/
+    exec $SUPERVISORD_COMMAND $DAEMON  --configuration $CONFIGURATION 
+    RETVAL=$?
+    echo
+    [ $RETVAL = 0 ] 
+    return $RETVAL
+}
+
+stop() {
+    check_for_upstart 0
+    echo -n $"Stopping $prog: "
+    killproc -p ${pidfile} ${prog}
+    RETVAL=$?
+    echo
+    [ $RETVAL = 0 ] && rm -rf  ${pidfile}
+}
+
+reload() {
+    echo -n $"Reloading $prog" 
+    killproc -p ${pidfile} ${prog} -HUP
+    RETVAL=$?
+    echo
+}
+
+rh_status() {
+    status -p ${pidfile} ${uwsgi}
+}
+
+case "$1" in
+  start)
+	start
+	;;
+  stop)
+        stop
+        ;;
+  reload)
+        reload
+        ;;
+  restart)
+	stop
+        start
+        ;;
+  status)  
+        rh_status
+        RETVAL=$?
+        ;;
+  *)  
+        echo $"Usage: $prog {start|stop|restart|reload|status}"
+	RETVAL=2   
+esac
+
+exit $RETVAL
