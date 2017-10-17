@@ -104,6 +104,8 @@ def configure():
 
         else:
             uploads = blueprint.upload('init/supervisor.conf', '/etc/init/supervisor.conf')
+            blueprint.upload('init.d/supervisor','/etc/init.d/supervisor')
+            debian.chmod('/etc/init.d/supervisor',mode=755)
 
         uploads.extend(blueprint.upload('supervisord.conf', '/etc/') or [])
         uploads.extend(blueprint.upload('programs-available/',
