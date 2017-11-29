@@ -48,7 +48,7 @@ def setup():
 def install():
     with sudo():
         info('Adding apt repository for {}', 'docker')
-        repository = 'https://download.docker.com/linux/ubuntu {} stable'.format(
+        repository = '[arch=amd64] https://download.docker.com/linux/ubuntu {} stable'.format(
             debian.lsb_codename())
         debian.add_apt_repository(repository)
 
