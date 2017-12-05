@@ -12,7 +12,10 @@ Docker Blueprint
     settings:
       docker:
         version: latest
-        userns-remap: default
+        config:
+          # Any daemon.json options
+          userns-remap: default
+          log-driver: json-file
 
 
 """
@@ -71,9 +74,7 @@ def configure():
     """
     Configure Docker
     """
-    daemon_json = json.dumps({
-        'userns-remap': blueprint.get('userns-remap', '')
-    })
+    daemon_json = json.dumps(blueprint.get('config', '') or {})
 
     changes = blueprint.upload('./daemon.json', '/etc/docker/', context={"config": daemon_json})
     if changes:
