@@ -17,6 +17,8 @@ Logstash Blueprint
           version: 2.4                     # Version of the server to install (Default: 2.4)
           elasticsearch_host: localhost    # ES Server address (Default: localhost)
           auto_disable_conf: True          # Disable any config files not listed in 'config' (Default: True)
+          plugins:                         # Optional community plugins
+            - logstash-filter-translate
           config:                          # Mapping of weight: config_file
             11: input-lumberjack           # Included logstash-forwarder input handler
             12: input-beats                # Included beats input handler
@@ -47,7 +49,7 @@ from refabric.contrib import blueprints
 
 from . import debian
 
-__all__ = ['setup', 'configure', 'enable', 'disable', 'start', 'stop', 'restart']
+__all__ = ['setup', 'configure', 'install_plugin', 'enable', 'disable', 'start', 'stop', 'restart']
 
 
 blueprint = blueprints.get(__name__)
@@ -162,6 +164,12 @@ def install_server():
 
         debian.mkdir('/etc/logstash/conf.d')
 
+        # Install plugins
+        plugins = blueprint.get('server.plugins', [])
+        for plugin in plugins:
+            info('Installing logstash "{}" plugin...', plugin)
+            install_plugin(plugin)
+
         # Create and download SSL cert
         create_server_ssl_cert()
         download_server_ssl_cert()
@@ -184,6 +192,15 @@ def create_server_ssl_cert():
 
 def download_server_ssl_cert(destination='ssl/'):
     blueprint.download('/etc/pki/tls/certs/logstash.crt', destination)
+
+
+@task
+def install_plugin(name=None):
+    if not name:
+        abort('No plugin name given')
+
+    with sudo():
+        run('/opt/logstash/bin/logstash-plugin install {}'.format(name))
 
 
 def configure_server(config, auto_disable_conf=True, **context):
