@@ -96,7 +96,6 @@ def configure():
             blueprint.upload('init.d/uwsgi','/etc/init.d/uwsgi')
             debian.chmod('/etc/init.d/uwsgi',mode=755)
 
-
 @task
 def top(vassal_name=None):
     """

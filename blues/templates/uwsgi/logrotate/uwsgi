@@ -1,9 +1,9 @@
 "/var/log/uwsgi/*.log.??????????"  
 {
   su root syslog
-  daily
-  maxage 14
-  rotate 2
+  {{ period }}
+  maxage  {{ maxage }}
+  rotate {{ rotate }}}
   nocreate
   compress
   missingok
