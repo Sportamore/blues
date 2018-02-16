@@ -12,6 +12,7 @@ NewRelic Server Blueprint
     settings:
       newrelic:
         newrelic_key: XXXXX
+        infrastructure: false
         plugins:
           - elasticsearch
           - nginx
@@ -43,10 +44,14 @@ blueprint = blueprints.get(__name__)
 
 
 def service(target=None, action=None):
-    debian.service('newrelic-sysmond', action, check_status=False)
+    if blueprint.get('infrastructure', False):
+        debian.service('newrelic-infra', action, check_status=False)
 
-    if blueprint.get('plugins', None):
-        debian.service('newrelic-plugin-agent', action, check_status=False)
+    else:
+        debian.service('newrelic-sysmond', action, check_status=False)
+
+        if blueprint.get('plugins', None):
+            debian.service('newrelic-plugin-agent', action, check_status=False)
 
 
 start = task(partial(service, action='start'))
@@ -69,6 +74,29 @@ def setup():
 
 
 def install():
+    if blueprint.get('infrastructure', False):
+        install_infra()
+
+    else:
+        install_agent()
+
+
+def install_infra():
+    with sudo():
+        info('Adding apt repository for Newrelic')
+        codename = debian.lsb_codename()
+        repo_addr = '[arch=amd64] http://download.newrelic.com/infrastructure_agent/linux/apt {} main'.format(codename)
+        debian.add_apt_repository(repo_addr)
+
+        info('Adding newrelic apt key')
+        debian.add_apt_key('https://download.newrelic.com/infrastructure_agent/gpg/newrelic-infra.gpg')
+        debian.apt_get('update')
+
+        info('Installing newrelic-infra')
+        debian.apt_get('install', 'newrelic-infra')
+
+
+def install_agent():
     with sudo():
         info('Adding apt repository for Newrelic')
         debian.add_apt_repository(
@@ -99,6 +127,23 @@ def configure():
     """
     Configure newrelic server
     """
+    if blueprint.get('infrastructure', False):
+        configure_infra()
+
+    else:
+        configure_agent()
+
+
+def configure_infra():
+    with sudo():
+        info('Adding license key to config')
+        context = {"newrelic_key": blueprint.get('newrelic_key', None)}
+        blueprint.upload('newrelic-infra.yml',
+                         '/etc/newrelic-infra.yml',
+                         context=context)
+
+
+def configure_agent():
     enabled_plugins = blueprint.get('plugins', [])
 
     with sudo():
