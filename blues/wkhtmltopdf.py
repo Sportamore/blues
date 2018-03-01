@@ -41,7 +41,7 @@ def install():
     wkhtmltox_long_ver = blueprint.get('wkhtmltopdf_version', '0.12.2.1')
     wkhtmltox_short_ver = '.'.join(wkhtmltox_long_ver.split('.')[:2])
     wkhtmltox_pkg = 'wkhtmltox-{}_linux-{}-amd64.deb'.format(
-        wkhtmltox_long_ver, debian.lbs_codename())
+        wkhtmltox_long_ver, debian.lsb_codename())
     wkhtmltox_url = 'https://github.com/wkhtmltopdf/wkhtmltopdf/releases/download/{}/{}'.format(
         wkhtmltox_long_ver, wkhtmltox_pkg)
     run('curl --silent --location --show-error --remote-name "{}"'.format(

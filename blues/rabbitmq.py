@@ -37,7 +37,7 @@ def setup():
     """
     Install Rabbitmq
     """
-    if debian.lbs_release() < '14.04':
+    if debian.lsb_release() < '14.04':
         install_testing()
     else:
         install_stable()

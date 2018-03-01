@@ -40,9 +40,9 @@ def setup():
 
 def install():
     with sudo():
-        lbs_release = debian.lbs_release()
+        lsb_release = debian.lsb_release()
 
-        if lbs_release in ('14.04', '16.04'):
+        if lsb_release in ('14.04', '16.04'):
             debian.add_apt_ppa('webupd8team/java', src=True)
             debian.debconf_set_selections(
                 'shared/accepted-oracle-license-v1-1 select true',

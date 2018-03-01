@@ -107,12 +107,10 @@ def temporary_dir(mode=None):
 
 def lsb_release():
     return run('lsb_release --release --short')
-lbs_release = lsb_release  # Backwards compatibility
 
 
 def lsb_codename():
     return run('lsb_release --codename --short')
-lbs_codename = lsb_codename  # Backwards compatibility
 
 
 def hostname():
@@ -184,7 +182,7 @@ def add_apt_key(url):
 
 def add_apt_ppa(name, accept=True, src=False):
     with sudo(), fabric.context_managers.cd('/etc/apt/sources.list.d'):
-        source_list = '%s-%s.list' % (name.replace('/', '-'), lbs_codename())
+        source_list = '%s-%s.list' % (name.replace('/', '-'), lsb_codename())
 
         if not fabric.contrib.files.exists(source_list):
             add_apt_repository('ppa:{}'.format(name), accept=accept, src=src)
