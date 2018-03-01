@@ -120,15 +120,36 @@ def hostname():
 
 
 def apt_get(command, *options):
-    options = ' '.join(options) if options else ''
+    env = {
+        'DEBIAN_FRONTEND': 'noninteractive'
+    }
 
-    return run('apt-get --yes {} {}'.format(command, options))
+    options = options or ['--yes', '--quiet']
+
+    command = '{} apt-get {} {}'.format(
+        command,
+        " ".join(["{}={}".format(k, v) for k, v in env.items()]),
+        " ".join(options)
+    )
+
+    return run(command)
 
 
 def apt_get_update(quiet=True):
     options = '-q' if quiet else ''
     info('Updating apt package lists')
     return run('apt-get {} update'.format(options))
+
+
+@task
+def safe_upgrade(pretend=False):
+    options = ['--yes', '--quiet']
+
+    if pretend:
+        options.append('--simulate')
+
+    apt_get_update()
+    apt_get('upgrade', *options)
 
 
 def debconf_set_selections(*selections):
