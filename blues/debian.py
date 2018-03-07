@@ -411,6 +411,22 @@ def remove_rc_service(name):
         update_rc(name, priorities='remove', force=True)
 
 
+@task
+def enable_service(name):
+    """
+    Enable a system service
+    """
+    add_rc_service(name)
+
+
+@task
+def disable_service(name):
+    """
+    Disable a system service
+    """
+    remove_rc_service(name)
+
+
 def nproc():
     """
     Get the number of CPU cores.
