@@ -117,16 +117,18 @@ def hostname():
     return run('hostname -A').stdout.strip()
 
 
-def apt_get(command, *options):
-    env = {
+def apt_get(command, *args, **kwargs):
+    env = kwargs
+    env.update({
         'DEBIAN_FRONTEND': 'noninteractive'
-    }
+    })
 
-    options = options or ['--yes', '--quiet']
+    options = ['--yes', '--quiet']
+    options.extend(args)
 
     command = '{} apt-get {} {}'.format(
-        command,
         " ".join(["{}={}".format(k, v) for k, v in env.items()]),
+        command,
         " ".join(options)
     )
 
@@ -141,12 +143,9 @@ def apt_get_update(quiet=True):
 
 @task
 def safe_upgrade(pretend=False):
-    options = ['--yes', '--quiet']
-
-    if pretend:
-        options.append('--simulate')
-
     apt_get_update()
+
+    options = ['--simulate'] if pretend else []
     apt_get('upgrade', *options)
 
 
