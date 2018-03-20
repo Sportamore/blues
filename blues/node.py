@@ -21,6 +21,8 @@ Node.js Blueprint
 """
 
 
+import os.path
+
 from fabric.contrib import files
 from fabric.context_managers import cd, prefix
 from fabric.decorators import task
@@ -37,7 +39,7 @@ from .util import maybe_managed
 
 from . import debian
 
-__all__ = ['setup', 'configure']
+__all__ = ['setup', 'configure', 'node_binary']
 
 
 blueprint = blueprints.get(__name__)
@@ -74,6 +76,13 @@ def get_version(default=7):
 
 def get_user():
     return blueprint.get('user')
+
+
+def node_binary(program):
+    """
+    Get the absolute path of an installed node binary
+    """
+    return os.path.join(project_home(), 'node_modules', '.bin', program)
 
 
 def install(for_user=None):
