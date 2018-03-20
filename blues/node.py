@@ -12,7 +12,6 @@ Node.js Blueprint
     settings:
       node:
         # version: latest    # Install latest node version
-        # user: some_app_user
         packages:            # List of npm packages to install (Optional)
           # - coffee-script
           # - yuglify
@@ -23,23 +22,18 @@ Node.js Blueprint
 
 import os.path
 
-from fabric.contrib import files
-from fabric.context_managers import cd, prefix
 from fabric.decorators import task
-from fabric.utils import abort, warn
+from fabric.utils import abort
 
 from refabric.api import info
 from refabric.context_managers import sudo
 from refabric.contrib import blueprints
 from refabric.operations import run
 
-from .application.project import git_repository_path, project_home, \
-    sudo_project, project_name
-from .util import maybe_managed
-
+from .application.project import project_home, project_name
 from . import debian
 
-__all__ = ['setup', 'configure', 'node_binary']
+__all__ = ['setup', 'configure', 'npm', 'install_package', 'node_binary']
 
 
 blueprint = blueprints.get(__name__)
@@ -59,7 +53,7 @@ def configure():
     """
     Install npm packages
     """
-    install_packages()
+    install_project_packages()
 
 
 def get_version(default=7):
@@ -72,10 +66,6 @@ def get_version(default=7):
 
     except ValueError:
         abort('Unsupported node version: {}'.format(version))
-
-
-def get_user():
-    return blueprint.get('user')
 
 
 def node_binary(program):
@@ -107,15 +97,35 @@ def install(for_user=None):
         debian.apt_get('install', 'nodejs')
 
 
-def install_packages():
+def install_package(package, local=True):
+    """
+    Install a single npm package, for the current project or globally
+    """
+    info('Installing package: {}', package)
+    if local:
+        npm('install {}'.format(package), user=project_name())
+
+    else:
+        npm('install -g {}'.format(package))
+
+
+def install_project_packages():
+    """
+    Install all declared packages
+    """
     packages = blueprint.get('packages', [])
     if packages:
-        info('Installing Packages')
-        npm('install {}'.format(' '.join(packages)), user=get_user())
+        info('Installing project packages')
+        npm('install {}'.format(' '.join(packages)), user=project_name())
 
 
-def npm(command, user='root', *args):
-    info('Running npm {} (as {})', command, user)
+def npm(command, user='root', quiet=True):
+    """
+    Run arbitrary NPM commands
+    """
     sudo = 'sudo -i' if user == 'root' else 'sudo -iu {}'.format(user)
-    opts = ' '.join(args)
-    run('{} npm {} {}'.format(sudo, opts, command))
+    info('Running npm as {}', user)
+    if quiet:
+        command = '--quiet ' + command
+
+    run('{} npm --no-progress {}'.format(sudo, command))
