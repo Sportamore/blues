@@ -81,8 +81,8 @@ def configure(force_reload=False):
         uploads = []
 
         # Configure application
-        uploads.apppend(blueprint.upload('./named.conf', config_dir))
-        uploads.apppend(blueprint.upload('./named.conf.default-zones', config_dir))
+        uploads.append(blueprint.upload('./named.conf', config_dir))
+        uploads.append(blueprint.upload('./named.conf.default-zones', config_dir))
 
         options_ctx = {
             'listen': blueprint.get(
@@ -94,10 +94,10 @@ def configure(force_reload=False):
             'forwarders': blueprint.get(
                 'forwarders', ['8.8.8.8', '8.8.4.4'])
         }
-        uploads.apppend(blueprint.upload(
+        uploads.append(blueprint.upload(
             './named.conf.options', config_dir, options_ctx))
 
-        uploads.apppend(blueprint.upload(
+        uploads.append(blueprint.upload(
             './zones/', zones_dir))
 
         # Custom zones
@@ -107,7 +107,7 @@ def configure(force_reload=False):
         for zone in zones:
             filename = 'db.{}'.format(zone)
             local_zones[zone] = filename
-            uploads.apppend(blueprint.upload(
+            uploads.append(blueprint.upload(
                 filename, os.path.join(zones_dir, filename),
                 {
                     'zone': zone,
@@ -115,7 +115,7 @@ def configure(force_reload=False):
                 }
             ))
 
-        uploads.apppend(blueprint.upload(
+        uploads.append(blueprint.upload(
             './named.conf.local', config_dir,
             {'zones': local_zones}))
 
