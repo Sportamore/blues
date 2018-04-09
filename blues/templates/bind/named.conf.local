@@ -1,0 +1,7 @@
+{%- for zone, filename in zones.iteritems() %}
+zone "{{ zone }}"{
+    type master;
+    file "{{ filename }}";
+};
+
+{%- endfor %}
