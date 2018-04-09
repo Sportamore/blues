@@ -82,7 +82,6 @@ def configure(force_reload=False):
 
         # Configure application
         uploads.apppend(blueprint.upload('./named.conf', config_dir))
-        uploads.apppend(blueprint.upload('./named.conf', config_dir))
         uploads.apppend(blueprint.upload('./named.conf.default-zones', config_dir))
 
         options_ctx = {
