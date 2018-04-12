@@ -81,15 +81,16 @@ def configure(force_reload=False):
         uploads = []
 
         # Configure application
-        uploads.append(blueprint.upload('./named.conf', config_dir))
-        uploads.append(blueprint.upload('./named.conf.default-zones', config_dir))
+        uploads.append(blueprint.upload('./named.conf.main', config_dir))
+        uploads.append(blueprint.upload('./named.conf.default-zones',
+                                        config_dir))
 
         options_ctx = {
             'listen': blueprint.get(
                 'listen', ['127.0.0.1']),
-            'allow-query': blueprint.get(
+            'allow_query': blueprint.get(
                 'allow-query', ['127.0.0.1']),
-            'allow-recursion': blueprint.get(
+            'allow_recursion': blueprint.get(
                 'allow-recursion', ['127.0.0.1']),
             'forwarders': blueprint.get(
                 'forwarders', ['8.8.8.8', '8.8.4.4'])
@@ -116,8 +117,7 @@ def configure(force_reload=False):
             ))
 
         uploads.append(blueprint.upload(
-            './named.conf.local', config_dir,
-            {'zones': local_zones}))
+            './named.conf.local', config_dir, {'zones': local_zones}))
 
         if uploads or force_reload:
             reload()

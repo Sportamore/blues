@@ -1,28 +1,28 @@
 options {
-	directory "/var/cache/bind";
+    directory "/var/cache/bind";
 
-	dnssec-validation no;
+    dnssec-validation no;
 
-	auth-nxdomain no;  # conform to RFC1035
+    auth-nxdomain no;  # conform to RFC1035
 
-	listen-on-v6 {
+    listen-on-v6 {
         none;
     };
 
-	listen-on {
+    listen-on {
 {%- for addr in listen %}
         {{ addr }};
 {%- endfor %}
     };
 
     allow-query {
-{%- for addr in allow-query %}
+{%- for addr in allow_query %}
         {{ addr }};
 {%- endfor %}
     };
 
     allow-recursion {
-{%- for addr in allow-recursion %}
+{%- for addr in allow_recursion %}
         {{ addr }};
 {%- endfor %}
    };
