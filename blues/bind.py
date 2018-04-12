@@ -107,9 +107,11 @@ def configure(force_reload=False):
         local_zones = {}
         for zone in zones:
             filename = 'db.{}'.format(zone)
-            local_zones[zone] = filename
+            file_path = os.path.join(zones_dir, filename)
+            local_zones[zone] = file_path
             uploads.append(blueprint.upload(
-                filename, os.path.join(zones_dir, filename),
+                filename,
+                file_path,
                 {
                     'zone': zone,
                     'serial': serial
