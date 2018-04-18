@@ -81,7 +81,8 @@ def configure(force_reload=False):
         uploads = []
 
         # Configure application
-        uploads.append(blueprint.upload('./named.conf.main', config_dir))
+        uploads.append(blueprint.upload('./named.conf.main',
+                                        os.path.join(config_dir, 'named.conf')))
         uploads.append(blueprint.upload('./named.conf.default-zones',
                                         config_dir))
 
