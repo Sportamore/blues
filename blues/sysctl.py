@@ -66,14 +66,7 @@ def configure():
 
         # Configure application
         local_params=blueprint.get('params',[])
-        #for local_param,value in local_params:
-        print(local_params)
         uploads.append(blueprint.upload('./sysctl.conf',config_dir,{"params" : local_params}))
-        info(path+'/templates/'+env.roles[0]+
-            '/sysctl/sysctl.d/*')
-        listan=[]
-        listan.append(local("ls "+path+'/templates/'+env.roles[0]+
-            '/sysctl/sysctl.d/',capture=True))
-        for fil in listan:
-            put(path+'/templates/'+env.roles[0]+'/sysctl/sysctl.d/'+fil, sysctl_dir+fil,use_sudo=True)
+        uploads.append(blueprint.upload('./sysctl.d/', sysctl_dir))
+
         info("In order for the new settings to work you need to reboot the system !!")
