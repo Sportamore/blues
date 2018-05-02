@@ -7,22 +7,11 @@ BIND Blueprint
 .. code-block:: yaml
 
     blueprints:
-      - blues.bind
+      - blues.sysctl
 
     settings:
-      bind:
-        # listen:
-        #   - 127.0.0.1
-        # allow-query:
-        #   - 127.0.0.1
-        # allow-reqursion:
-        #   - 127.0.0.1
-        # forwarders:
-        #   - "8.8.8.8"
-        #   - "8.8.4.4"
-        zones:
-          - company.local
-          - some.other.zone
+      params:
+        - 'vm.swappiness = 5'
 
 """
 import os
