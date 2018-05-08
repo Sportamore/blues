@@ -107,10 +107,11 @@ def configure():
     Configure Postgresql, start service if not running, restart if reconfigured
     """
     context = {
+        'data_dir': blueprint.get('data_dir', '/var/lib/postgresql/{}/main'.format(version())),
         'listen_addresses': blueprint.get('bind', 'localhost'),
         'host_all_allow': blueprint.get('allow', None),
         'wal_level': blueprint.get('wal_level', 'minimal'),
-        'max_wal_senders': blueprint.get('max_wal_senders', 2),
+        'max_wal_senders': blueprint.get('max_wal_senders', 0),
         'wal_keep_segments': blueprint.get('wal_keep_segments', 16),
     }
     updates = [
