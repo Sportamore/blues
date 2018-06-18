@@ -39,29 +39,28 @@ sysctl_dir = os.path.join(config_dir, 'sysctl.d/')
 path=os.getcwd()
 
 
-@task 
-@task 
-def list(lista=False):
+@task
+def list(*values):
     """
-    List sysctl lista for one or more values sysctl.list:lista='vm.swappiness;vm.panic_on_oom'
+    List sysctl values, e.g. vm.swappiness,vm.panic_on_oom'
     """
-    with sudo():
-        if lista==False:
-            run("sysctl -a")
-        else :
-            lista2=lista.split(';')
-            values=[]
-            for l in lista2:
-                values.append(run("sysctl "+l))
-            for value in values: 
-                info(value)
+    with sudo(), silent():
+        if not values:
+            for key in run('sysctl -a').split('\n'):
+                info(key)
+
+        else:
+            for value in values:
+                info(run('sysctl %s' % value))
+
+
 @task
 def configure():
     """
     Configure sysctl settings
     """
     with sudo():
-       
+
         uploads = []
 
         # Configure application
@@ -69,4 +68,4 @@ def configure():
         uploads.append(blueprint.upload('./sysctl.conf',config_dir,{"params" : local_params}))
         uploads.append(blueprint.upload('./sysctl.d/', sysctl_dir))
 
-        info("In order for the new settings to work you need to reboot the system !!")
+        info("In order for the new settings to work you need to reboot the system.")
