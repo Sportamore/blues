@@ -167,8 +167,9 @@ def incoming(revision=None):
             info("Unable to get changelog (possibly different branches)")
             return None
 
-        info(u'Changes since deploy:\n{}',
-             u'\n'.join([u' :: '.join(row) for row in git_log]))
+        # (Re)fabric isn't always unicode safe
+        summary = u'\n'.join([u' :: '.join(row) for row in git_log])
+        info('Changes since deploy:\n{}', summary.encode('utf-8'))
 
         return git_log
 
