@@ -12,7 +12,6 @@ from fabric.utils import indent, abort, warn
 from blues.application.project import git_repository_path
 
 from refabric.context_managers import sudo, silent
-from refabric.operations import run
 from refabric.utils import info
 from refabric.contrib import blueprints
 
@@ -38,7 +37,8 @@ __all__ = [
     'install_providers',
     'notify_start',
     'notify_finish',
-    'notify_event'
+    'notify_event',
+    'get_config',
 ]
 
 
@@ -282,6 +282,11 @@ def diff_requirements_smart(previous_commit, current_commit, filename,
     has_changed = force_changed or bool(additions or removals)
 
     return has_changed, additions, removals
+
+
+def get_config():
+    """ Returns app config as a dict """
+    return blueprint.get('config')
 
 
 def get_installation_method(filename):
