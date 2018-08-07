@@ -13,60 +13,60 @@ Sentry Blueprint
       sentry:
         auth_token: XXXXX
         organization: some-org
-        repository: some-repo
         environment: production
         projects:
           - proj-slug
           - other-slug
 
 """
+import urllib2
+import json
+from datetime import datetime
+
 from fabric.decorators import task
 from fabric.utils import warn
 from refabric.api import info
 
 from refabric.contrib import blueprints
 
-import urllib2
-import json
-from datetime import datetime
+from . import project
 
-__all__ = ['notify']
+
+__all__ = ['deploy']
 
 
 blueprint = blueprints.get(__name__)
 
 
 @task
-def notify(version, from_revision, to_revision,
-           date_start=None, date_stop=None):
+def deploy(revision, version, date_start=None, date_stop=None):
     """
     Create a Sentry Release and immediately deploy it
     """
-    create_release(version, from_revision, to_revision)
+    projects = blueprint.get('projects', None)
+    if not projects:
+        # Not configured, abort silently.
+        return False
+
+    create_release(revision, version, projects)
     create_deploy(version, date_start, date_stop)
 
 
-def create_release(version, from_revision, to_revision):
+def create_release(revision, version, projects):
     """
     Docs: https://docs.sentry.io/api/releases/post-organization-releases/
     """
     info('Creating Sentry release')
 
-    repository = blueprint.get('repository', '')
     payload = {
         'version': version,
-        'ref': to_revision,
+        'projects': projects,
+        'url': project.github_link() + '/releases',
         'refs': [{
-            'repository': repository,
-            'commit': to_revision,
-            'previousCommit': from_revision
-        }],
-        'dateReleased': _api_datestamp(datetime.now())
+            'repository': project.github_repo(),
+            'commit': revision,
+        }]
     }
-
-    projects = blueprint.get('projects', None)
-    if projects:
-        payload['projects'] = projects
 
     endpoint = 'releases/'
     _call_sentry_api(endpoint, payload)
@@ -82,7 +82,7 @@ def create_deploy(version, date_start, date_stop):
     payload = {
         'environment': environment,
         'dateStarted': _api_datestamp(date_start or datetime.now()),
-        'dateFinished': _api_datestamp(date_start or datetime.now())
+        'dateFinished': _api_datestamp(date_stop or datetime.now())
     }
 
     endpoint = 'releases/%s/deploys/' % version
