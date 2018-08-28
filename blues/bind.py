@@ -102,8 +102,10 @@ def configure(force_reload=False):
         uploads.append(blueprint.upload(
             './zones/', zones_dir))
 
-        # Custom zones
+        # Zones
         serial = int(time())
+        ttl = blueprint.get('ttl', 604800)
+
         zones = blueprint.get('zones', [])
         local_zones = {}
         for zone in zones:
@@ -115,12 +117,17 @@ def configure(force_reload=False):
                 file_path,
                 {
                     'zone': zone,
-                    'serial': serial
+                    'serial': serial,
+                    'ttl': ttl
                 }
             ))
 
         uploads.append(blueprint.upload(
             './named.conf.local', config_dir, {'zones': local_zones}))
+
+        slave_zones = blueprint.get('slave', [])
+        uploads.append(blueprint.upload(
+            './named.conf.slave', config_dir, {'slave_zones': slave_zones}))
 
         if uploads or force_reload:
             reload()

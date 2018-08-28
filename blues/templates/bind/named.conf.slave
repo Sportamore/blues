@@ -1,0 +1,14 @@
+{%- for slave in slave_zones %}
+zone "{{ slave.zone }}"{
+    type slave;
+    notify no;
+    file "db.{{ slave.zone }}";
+    masters {
+        {%- for master in slave.masters %}
+        {{ master }};
+        {%- endfor %}
+    };
+
+};
+
+{%- endfor %}
