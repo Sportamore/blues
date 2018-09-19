@@ -17,6 +17,8 @@ BIND Blueprint
             scopes:
               - net: 10.1.0.0
                 mask: 255.255.255.0
+                start-range: 5
+                end-range: 250
                 domain: "sportamore.local"
                 routers: 10.1.0.1
                 options: 
