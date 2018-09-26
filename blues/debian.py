@@ -6,6 +6,7 @@ Useful debian commands for other blueprints to use.
 """
 import base64
 import os
+import re
 from contextlib import contextmanager
 from functools import partial
 
@@ -21,6 +22,12 @@ from fabric.utils import abort, puts, indent, warn
 from refabric.context_managers import silent, sudo
 from refabric.operations import run
 from refabric.utils import info
+
+"""
+Startup options systemd and none systemd 
+"""    
+boot_options_14='nobootwait,bootwait'
+boot_options_16='x-systemd.requires=,x-systemd.before=,x-systemd.after=,x-systemd.requires-mounts-for=,x-systemd.device-bound,x-systemd.automount,x-systemd.idle-timeout=,x-systemd.device-timeout=,x-systemd.mount-timeout=,x-systemd.makefs,x-systemd.growfs,_netdev,x-initrd.mount'
 
 
 def chmod(location, mode=None, owner=None, group=None, recursive=False):
@@ -583,6 +590,7 @@ def add_fstab(filesystem=None, mount_point=None, type='auto', options='rw', dump
             dump=dump,
             pazz=pazz
         )
+        validate_boot_options(options)
 
         # Add mount to /etc/fstab if not already there (?)
         with silent():
@@ -597,6 +605,27 @@ def add_fstab(filesystem=None, mount_point=None, type='auto', options='rw', dump
         if mounted_file_system and mounted_file_system != filesystem:
             unmount(mount_point)
 
+def validate_boot_options(options):
+    """
+    Validate systemd boot options
+    """
+    if lsb_release() == '14.04':
+        boot_options_check=boot_options_16
+    else: 
+        boot_options_check=boot_options_14
+    for option in options.split(','): 
+        for value in boot_options_check.split(','):
+            if re.search('=',value):
+                value = value.split('=')[0]
+            if re.search('=',option):
+                option = option.split('=')[0]
+            if value==option: 
+                warn(value +" is not a valid for "+lsb_release()+" check boot option in your yaml")
+                if boot_options_check == boot_options_14:
+                    info("Valid systemd boot options is: "+boot_options_16)
+                else: 
+                    info("Valid boot options is: "+boot_options_14)
+                exit()
 
 def locale_gen(locale, utf8=True):
     locale_gen_cmd = 'locale-gen {}'.format(locale)
