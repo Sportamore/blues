@@ -12,6 +12,11 @@ Templates are handled as crontabs and should be named after related user.
     blueprints:
       - blues.cron
 
+    settings:
+      cron:
+        username:
+          - "*/10 * * * * /opt/do_something.sh"
+
 """
 import os
 
@@ -39,7 +44,15 @@ def configure():
     with sudo(), silent():
         with debian.temporary_dir(mode=555) as temp_dir:
             updates = blueprint.upload('./', temp_dir)
+            for user, schedule in blueprint.get('', {}).items():
+                tmp_file = os.path.join(temp_dir, user)
+                blueprint.upload('./crontab', tmp_file, context={"schedule": schedule})
+                updates.append(user)
+
             for update in updates:
+                if update.endswith('crontab'):
+                    continue
+
                 user = os.path.basename(update)
                 info('Installing new crontab for {}...', user)
                 run('crontab -u {} {}'.format(user, os.path.join(temp_dir, user)))
