@@ -32,7 +32,7 @@ from refabric.contrib import blueprints
 from . import project
 
 
-__all__ = ['deploy']
+__all__ = ['deploy', 'create_release', 'create_deployment']
 
 
 blueprint = blueprints.get(__name__)
@@ -72,7 +72,7 @@ def create_release(revision, version, projects):
     _call_sentry_api(endpoint, payload)
 
 
-def create_deploy(version, date_start, date_stop):
+def create_deployment(version, date_start, date_stop):
     """
     Docs: https://docs.sentry.io/api/releases/post-release-deploys/
     """

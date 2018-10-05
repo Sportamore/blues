@@ -15,7 +15,7 @@ __all__ = [
     'app_root', 'project_home', 'git_root', 'use_virtualenv', 'virtualenv_path',
     'git_repository', 'git_repository_path', 'python_path', 'sudo_project',
     'requirements_txt', 'use_python', 'static_base', 'project_name',
-    'releases', 'remote_head', 'github_repository', 'github_link'
+    'releases', 'remote_head', 'github_repo', 'github_link'
 ]
 
 blueprint = blueprints.get('blues.app')
