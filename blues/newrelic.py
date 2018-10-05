@@ -13,6 +13,7 @@ NewRelic Server Blueprint
       newrelic:
         newrelic_key: XXXXX
         infrastructure: false
+
         plugins:
           - elasticsearch
           - nginx
@@ -20,6 +21,9 @@ NewRelic Server Blueprint
           - redis
           - rabbitmq
           - uwsgi
+
+        event_key: YYYYY
+        app_id: 12345
 """
 from fabric.decorators import task
 from fabric.utils import warn
