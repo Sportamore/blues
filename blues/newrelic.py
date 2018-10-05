@@ -28,7 +28,7 @@ from refabric.api import run, info
 from refabric.context_managers import sudo
 from refabric.contrib import blueprints
 
-from . import debian, git, python
+from . import debian, git, python, user
 
 from functools import partial
 import urllib2
@@ -44,11 +44,11 @@ def service(target=None, action=None):
     if blueprint.get('infrastructure', False):
         debian.service('newrelic-infra', action, check_status=False)
 
-    else:
+    if blueprint.get('sysmon', False):
         debian.service('newrelic-sysmond', action, check_status=False)
 
-        if blueprint.get('plugins', None):
-            debian.service('newrelic-plugin-agent', action, check_status=False)
+    if blueprint.get('plugins', None):
+        debian.service('newrelic-plugin-agent', action, check_status=False)
 
 
 start = task(partial(service, action='start'))
@@ -71,11 +71,20 @@ def setup():
 
 
 def install():
+
+    user.create_service_user('newrelic')
+    debian.mkdir('/etc/newrelic/')
+    debian.mkdir('/var/log/newrelic', owner='newrelic')
+    debian.mkdir('/var/run/newrelic', owner='newrelic')
+
     if blueprint.get('infrastructure', False):
         install_infra()
 
-    else:
+    if blueprint.get('sysmon', False):
         install_agent()
+
+    if blueprint.get('plugins', None):
+        install_plugin_agent()
 
 
 def install_infra():
@@ -106,17 +115,20 @@ def install_agent():
 
         debian.chmod('/var/log/newrelic', owner='newrelic', recursive=True)
 
-        if blueprint.get('plugins', None):
-            python.install()
-            python.pip('install', 'newrelic-plugin-agent')
 
-            if debian.lsb_release() == '16.04':
-                blueprint.upload('newrelic-plugin-agent.service',
-                                 '/etc/systemd/system/newrelic-plugin-agent.service')
-            else:
-                blueprint.upload('newrelic-plugin-agent.init',
-                                 '/etc/init.d/newrelic-plugin-agent')
-                debian.chmod('/etc/init.d/newrelic-plugin-agent', '755')
+def install_plugin_agent():
+    with sudo():
+        python.install()
+        python.pip('install', 'newrelic-plugin-agent')
+
+        if debian.lsb_release() == '16.04':
+            blueprint.upload('newrelic-plugin-agent.service',
+                             '/etc/systemd/system/newrelic-plugin-agent.service')
+        else:
+            blueprint.upload('newrelic-plugin-agent.init',
+                             '/etc/init.d/newrelic-plugin-agent')
+            debian.chmod('/etc/init.d/newrelic-plugin-agent', '755')
+
 
 
 @task
@@ -127,8 +139,11 @@ def configure():
     if blueprint.get('infrastructure', False):
         configure_infra()
 
-    else:
+    if blueprint.get('sysmon', False):
         configure_agent()
+
+    if blueprint.get('plugins', None):
+        configure_plugin_agent()
 
 
 def configure_infra():
@@ -141,16 +156,21 @@ def configure_infra():
 
 
 def configure_agent():
-    enabled_plugins = blueprint.get('plugins', [])
-
     with sudo():
         info('Adding license key to config')
         newrelic_key = blueprint.get('newrelic_key', None)
         run('nrsysmond-config --set license_key={}'.format(newrelic_key))
 
-        if len(enabled_plugins):
+
+def configure_plugin_agent():
+    enabled_plugins = blueprint.get('plugins', [])
+    if len(enabled_plugins):
+        with sudo():
+            newrelic_key = blueprint.get('newrelic_key', None)
+
             context = {p: True for p in enabled_plugins}
             context["newrelic_key"] = newrelic_key
+
             blueprint.upload('newrelic-plugin-agent.cfg',
                              '/etc/newrelic/newrelic-plugin-agent.cfg',
                              context=context)
