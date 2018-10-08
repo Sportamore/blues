@@ -98,7 +98,7 @@ def _call_sentry_api(endpoint, payload):
     token = blueprint.get('auth_token', '')
     organization = blueprint.get('organization', '')
 
-    url = '/api/0/organizations/%s/%s' % (organization, endpoint)
+    url = 'https://sentry.io/api/0/organizations/%s/%s' % (organization, endpoint)
     headers = {
         'Content-Type': 'application/json',
         'Authorization': 'Bearer %s' % token
