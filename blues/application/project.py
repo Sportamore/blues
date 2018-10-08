@@ -15,7 +15,7 @@ __all__ = [
     'app_root', 'project_home', 'git_root', 'use_virtualenv', 'virtualenv_path',
     'git_repository', 'git_repository_path', 'python_path', 'sudo_project',
     'requirements_txt', 'use_python', 'static_base', 'project_name',
-    'releases', 'remote_head', 'github_owner'
+    'releases', 'remote_head', 'github_repo', 'github_link'
 ]
 
 blueprint = blueprints.get('blues.app')
@@ -101,24 +101,11 @@ def remote_head():
     return ('origin/{}'.format(branch), ls[branch][:7])
 
 
-def github_owner():
+def github_repo():
     """
-    Get the account/organization from the project's github url
+    Get the canonical name of a github repo
 
-    :return str: account name
-    """
-    url = git_repository().get('url', '')
-    if not url.startswith('git@github.com:'):
-        return None
-
-    return git.parse_url(url)['gh_owner']
-
-
-def github_link():
-    """
-    Get the HTTP url to the configured github repo
-
-    :return str: repository url
+    :return str: repository name
     """
     repo = git_repository()
 
@@ -131,4 +118,17 @@ def github_link():
     if not repo_owner and repo_name:
         return None
 
-    return 'https://github.com/{}/{}'.format(repo_owner, repo_name)
+    return '{}/{}'.format(repo_owner, repo_name)
+
+
+def github_link():
+    """
+    Get the HTTP url to the configured github repo
+
+    :return str: repository url
+    """
+    repo = github_repo()
+    if not repo:
+        return None
+
+    return 'https://github.com/{}'.format(repo)

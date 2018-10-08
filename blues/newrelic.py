@@ -13,6 +13,7 @@ NewRelic Server Blueprint
       newrelic:
         newrelic_key: XXXXX
         infrastructure: false
+
         plugins:
           - elasticsearch
           - nginx
@@ -20,6 +21,9 @@ NewRelic Server Blueprint
           - redis
           - rabbitmq
           - uwsgi
+
+        event_key: YYYYY
+        app_id: 12345
 """
 from fabric.decorators import task
 from fabric.utils import warn
@@ -27,14 +31,11 @@ from refabric.api import run, info
 
 from refabric.context_managers import sudo
 from refabric.contrib import blueprints
-from .application.project import python_path
-
 
 from . import debian, git, python, user
 
 from functools import partial
 import urllib2
-import urllib
 import json
 
 __all__ = ['start', 'stop', 'restart', 'setup', 'configure']
@@ -179,65 +180,42 @@ def configure_plugin_agent():
                              context=context)
 
 
-def send_deploy_event(payload=None):
+def deploy(revision, description, changes=None):
     """
     Sends deploy event to newrelic
-    payload = json.dumps({ 'deployment': {
-            'description': new_tag,
-            'revision': commit_hash,
-            'changelog': changes,
-            'user': deployer,
-            }
-    })
-    :param payload: payload is a json dict with newrelic api info
-    :return:
     """
-    newrelic_key = blueprint.get('newrelic_event_key', None)
-    app_id = blueprint.get('app_id', None)
+    event_key = blueprint.get('event_key', "")
+    app_id = blueprint.get('app_id', "")
 
-    if all([newrelic_key, app_id]):
-        url = 'https://api.newrelic.com/v2/applications/{}/deployments.json' \
-              ''.format(app_id)
-        headers = {
-            'x-api-key': newrelic_key,
-            'Content-Type': 'application/json'
+    if not app_id:
+        # Not configured, abort silently.
+        return False
+
+    elif not event_key:
+        warn('Not configured')
+        return False
+
+    info('Creating NewRelic deployment')
+
+    deployer = git.get_local_commiter()
+    payload = {
+        'deployment': {
+            'revision': revision,
+            'description': description,
+            'changelog': changes or '',
+            'user': deployer
         }
+    }
 
-    if all([newrelic_key, app_id]):
-        url = 'https://api.newrelic.com/v2/applications/{}/deployments.json'.format(app_id)
-        headers = {
-            'x-api-key': newrelic_key,
-            'Content-Type': 'application/json'
-        }
+    url = 'https://api.newrelic.com/v2/applications/{}/deployments.json'.format(app_id)
+    headers = {
+        'x-api-key': event_key,
+        'Content-Type': 'application/json'
+    }
 
-        if not payload:
-            path = python_path()
-            commit_hash = git.get_commit(path, short=True)
-            new_tag, old_tag = git.get_two_most_recent_tags(path)
-            changes = git.log_between_tags(path, old_tag, new_tag)
-            deployer = git.get_local_commiter()
+    try:
+        request = urllib2.Request(url, headers=headers)
+        urllib2.urlopen(request, data=json.dumps(payload))
 
-            payload = json.dumps({
-                'deployment': {
-                    'description': new_tag,
-                    'revision': commit_hash,
-                    'changelog': changes,
-                    'user': deployer,
-                }
-            })
-
-        try:
-            request = urllib2.Request(url, headers=headers)
-            urllib2.urlopen(request, data=payload)
-            info('Deploy event sent')
-
-        except Exception:
-            warn('NewRelic notification failed')
-
-    else:
-        for i in ['app_id', 'newrelic_key']:
-            if not locals().get(i, None):
-                info('missing key: {}'.format(i))
-        for i in ['app_id', 'newrelic_event_key']:
-            if not locals().get(i, None):
-                info('missing key: {}'.format(i))
+    except Exception:
+        warn('NewRelic deployment failed')
