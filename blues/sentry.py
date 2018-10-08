@@ -29,7 +29,7 @@ from refabric.api import info
 
 from refabric.contrib import blueprints
 
-from . import project
+from .application.project import github_repo, github_link
 
 
 __all__ = ['deploy', 'create_release', 'create_deployment']
@@ -56,14 +56,14 @@ def create_release(revision, version, projects):
     """
     Docs: https://docs.sentry.io/api/releases/post-organization-releases/
     """
-    info('Creating Sentry release')
+    info('Creating Sentry release: {}', version)
 
     payload = {
         'version': version,
         'projects': projects,
-        'url': project.github_link() + '/releases',
+        'url': github_link() + '/releases',
         'refs': [{
-            'repository': project.github_repo(),
+            'repository': github_repo(),
             'commit': revision,
         }]
     }
@@ -76,9 +76,9 @@ def create_deployment(version, date_start, date_stop):
     """
     Docs: https://docs.sentry.io/api/releases/post-release-deploys/
     """
-    info('Creating Sentry deployment')
-
     environment = blueprint.get('environment', 'unknown')
+    info('Deploying sentry release: {} to: {}', version, environment)
+
     payload = {
         'environment': environment,
         'dateStarted': _api_datestamp(date_start or datetime.now()),

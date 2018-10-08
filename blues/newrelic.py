@@ -195,7 +195,7 @@ def deploy(revision, description, changes=None):
         warn('Not configured')
         return False
 
-    info('Creating NewRelic deployment')
+    info('Creating NewRelic deployment: {}', revision)
 
     deployer = git.get_local_commiter()
     payload = {
