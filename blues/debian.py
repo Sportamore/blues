@@ -6,6 +6,7 @@ Useful debian commands for other blueprints to use.
 """
 import base64
 import os
+import re
 from contextlib import contextmanager
 from functools import partial
 
@@ -21,6 +22,13 @@ from fabric.utils import abort, puts, indent, warn
 from refabric.context_managers import silent, sudo
 from refabric.operations import run
 from refabric.utils import info
+
+"""
+Startup options systemd and none systemd 
+"""    
+boot_options_14=['nobootwait','bootwait']
+boot_options_16=['x-systemd.requires','x-systemd.before','x-systemd.after','x-systemd.requires-mounts-for','x-systemd.device-bound','x-systemd.automount','x-systemd.idle-timeout','x-systemd.device-timeout','x-systemd.mount-timeout','x-systemd.makefs','x-systemd.growfs,_netdev','x-initrd.mount']
+boot_options_16_more=['requires','before','after','requires-mounts-for','idle-timeout','device-timeout','mount-timeout']
 
 
 def chmod(location, mode=None, owner=None, group=None, recursive=False):
@@ -583,6 +591,7 @@ def add_fstab(filesystem=None, mount_point=None, type='auto', options='rw', dump
             dump=dump,
             pazz=pazz
         )
+        validate_boot_options(options)
 
         # Add mount to /etc/fstab if not already there (?)
         with silent():
@@ -597,6 +606,32 @@ def add_fstab(filesystem=None, mount_point=None, type='auto', options='rw', dump
         if mounted_file_system and mounted_file_system != filesystem:
             unmount(mount_point)
 
+def validate_boot_options(options):
+    """
+    Validate systemd boot options
+    """
+    if lsb_release() == '14.04':
+        none_boot_options_check=boot_options_16
+    else: 
+        none_boot_options_check=boot_options_14
+    for option in options.split(','):
+        stript=0
+        if re.search('=',option):
+            option = option.split('=')[0]
+            stript=1
+        if option in none_boot_options_check:
+            warn(option +" is not a valid for "+lsb_release()+" check boot option in your yaml") 
+            if lsb_release() == '14.04':
+                info("Valid boot options is:"+str(boot_options_14))
+            else: 
+                info("Valid boot options is:"+str(boot_options_16))
+            exit()
+        if stript==0:
+            if re.search('x-systemd',option):
+                option = option.replace("x-systemd.","")
+            if option in boot_options_16_more:
+                warn("Missing = for x-systemd."+option)
+                exit()
 
 def locale_gen(locale, utf8=True):
     locale_gen_cmd = 'locale-gen {}'.format(locale)
