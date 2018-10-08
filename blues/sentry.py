@@ -49,7 +49,7 @@ def deploy(revision, version, date_start=None, date_stop=None):
         return False
 
     create_release(revision, version, projects)
-    create_deploy(version, date_start, date_stop)
+    create_deployment(version, date_start, date_stop)
 
 
 def create_release(revision, version, projects):
