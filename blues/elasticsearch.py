@@ -150,8 +150,8 @@ def configure():
     debian.mkdir(service_dir)
     changes += blueprint.upload('./override.conf', service_dir + '/override.conf', context)
 
-    # if changes:
-    #     restart()
+    if changes:
+        restart()
 
 
 @task
