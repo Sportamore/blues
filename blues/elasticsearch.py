@@ -15,7 +15,6 @@ Elasticsearch Blueprint
         # version: latest                  # Speciifc version of elasticsearch to install
         # cluster:
           # name: foobar                   # Name of the cluster (Default: elasticsearch)
-          # discovery: true                # Enable multicast discovery (default: True)
           # nodes:                         # Nodes to explicitly add to the cluster (Optional)
             # - node
         # node:
@@ -25,10 +24,7 @@ Elasticsearch Blueprint
           # master: true                   # Allow node to be elected master (Default: True)
           # data: true                     # Allow node to store data (Default: True)
           # bind: _site_                   # Set the bind address specifically, IPv4 or IPv6 (Default: _local_)
-        # default_shards: 5                # Number of shards/splits of an index (Default: 5)
-        # default_replicas: 0              # Number of replicas / additional copies of an index (Default: 0)
         # queue_size: 3000                 # Set thread pool queue size (Default: 1000)
-        # log_level: WARN                  # Set the log level to use (Default: WARN)
         # plugins:                         # Optional list of plugins to install
         #   - mobz/elasticsearch-head
 
@@ -122,7 +118,6 @@ def configure():
     context = {
         'cluster_name': blueprint.get('cluster.name', 'elasticsearch'),
         'cluster_size': cluster_size,
-        'zen_multicast': yaml_boolean(blueprint.get('cluster.discovery', True)),
         'zen_unicast_hosts': yaml.dump(cluster_nodes) if len(cluster_nodes) else None,
         'node_name': blueprint.get('node.name', hostname),
         'node_master': yaml_boolean(blueprint.get('node.master', True)),
@@ -130,20 +125,19 @@ def configure():
         'data_path': yaml_boolean(blueprint.get('node.data_path', '/var/lib/elasticsearch')),
         'network_host': blueprint.get('node.bind', '_local_'),
         'heap_size': blueprint.get('node.heap_size', '256m'),
-        'number_of_shards': blueprint.get('default_shards', '5'),
-        'number_of_replicas': blueprint.get('default_replicas', '0'),
         'queue_size': blueprint.get('queue_size', '1000'),
-        'log_level': blueprint.get('log_level', 'WARN'),
         'memory_lock': yaml_boolean(mlockall),
         'mlockall': mlockall
     }
 
     changes += blueprint.upload('./elasticsearch.yml', '/etc/elasticsearch/',
                                 context=context, user='elasticsearch')
-    changes += blueprint.upload('./logging.yml', '/etc/elasticsearch/',
+
+    changes += blueprint.upload('./jvm.options', '/etc/elasticsearch/',
                                 context=context, user='elasticsearch')
 
-    changes += blueprint.upload('./default', '/etc/default/elasticsearch', context)
+    changes += blueprint.upload('./default', '/etc/default/elasticsearch',
+                                context=context, user='elasticsearch')
 
     service_dir = "/etc/systemd/system/elasticsearch.service.d"
 

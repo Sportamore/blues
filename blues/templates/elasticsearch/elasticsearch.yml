@@ -28,6 +28,7 @@ node.data: {{ node_data }}
 # Path to directory where to store the data (separate multiple locations by comma):
 #
 path.data: {{ data_path }}
+#
 path.logs: /var/log/elasticsearch
 #
 # ----------------------------------- Memory -----------------------------------
@@ -43,11 +44,6 @@ bootstrap.memory_lock: {{ memory_lock }}
 network.host: {{ network_host }}
 #
 # --------------------------------- Discovery ----------------------------------
-#
-# Discovery infrastructure ensures nodes can be found within a cluster
-# and master node is elected. Multicast discovery is the default.
-#
-discovery.zen.ping.multicast.enabled: {{ zen_multicast }}
 #
 # Pass an initial list of hosts to perform discovery when new node is started:
 # The default list of hosts is ["127.0.0.1", "[::1]"]
@@ -70,16 +66,6 @@ discovery.zen.ping.multicast.enabled: {{ zen_multicast }}
 # gateway.expected_nodes: 2
 {% if cluster_size %}gateway.expected_nodes: {{ cluster_size }}{% endif %}
 #
-# ----------------------------------- Index ------------------------------------
-#
-# Set the number of shards (splits) of an index (5 by default):
-#
-index.number_of_shards: {{ number_of_shards }}
-#
-# Set the number of replicas (additional copies) of an index (1 by default):
-#
-index.number_of_replicas: {{ number_of_replicas }}
-#
 # ---------------------------------- Various -----------------------------------
 #
 # Disable starting multiple nodes on a single system:
@@ -92,8 +78,8 @@ index.number_of_replicas: {{ number_of_replicas }}
 #
 # Threading optimization
 #
-threadpool.search.queue_size: {{ queue_size }}
+thread_pool.search.queue_size: {{ queue_size }}
 #
-threadpool.bulk.queue_size: {{ queue_size }}
+thread_pool.bulk.queue_size: {{ queue_size }}
 #
 # ------------------------------------------------------------------------------
