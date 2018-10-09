@@ -11,8 +11,8 @@ Elasticsearch Blueprint
 
     settings:
       elasticsearch:
-        # branch: 2.x                      # Major Version of elasticsearch (default: 2.x)
-        version: 2.4.1                     # Speciifc version of elasticsearch to install (Required)
+        # branch: 6.x                      # Major Version of elasticsearch (default: 2.x)
+        # version: latest                  # Speciifc version of elasticsearch to install
         # cluster:
           # name: foobar                   # Name of the cluster (Default: elasticsearch)
           # discovery: true                # Enable multicast discovery (default: True)
@@ -66,27 +66,29 @@ def setup():
     configure()
 
 
+def add_elastic_repo(branch):
+    with sudo():
+        info('Adding apt repository for {} branch {}', 'elastic.co', branch)
+
+        repository = 'https://artifacts.elastic.co/packages/{}/apt stable main'.format(branch)
+        debian.add_apt_repository(repository)
+
+        info('Adding apt key for', repository)
+        debian.add_apt_key('https://artifacts.elastic.co/GPG-KEY-elasticsearch')
+        debian.apt_get_update()
+
+
 def install():
     with sudo():
         from blues import java
         java.install()
 
-        branch = blueprint.get('branch', '2.x')
+        branch = blueprint.get('branch', '6.x')
+        add_elastic_repo(branch)
 
-        info('Adding apt repository for {} branch {}', 'elasticsearch', branch)
-        repository = 'https://packages.elastic.co/elasticsearch/{0}/debian stable main'.format(branch)
-        debian.add_apt_repository(repository)
-
-        info('Adding apt key for', repository)
-        debian.add_apt_key('https://packages.elastic.co/GPG-KEY-elasticsearch')
-        debian.apt_get_update()
-
-        # Install elasticsearch (and java)
-        version = blueprint.get('version', '2.4.0')
-        info('Installing elasticsearch version "{}"', version)
-        package = 'elasticsearch' + ('={}'.format(version) if version else '')
-
-        info('Installing {}', package)
+        version = blueprint.get('version', 'latest')
+        info('Installing {} version {}', 'elasticsearch', version)
+        package = 'elasticsearch' + ('={}'.format(version) if version != 'latest' else '')
         debian.apt_get('install', package)
 
         # Install plugins
@@ -125,6 +127,7 @@ def configure():
         'node_name': blueprint.get('node.name', hostname),
         'node_master': yaml_boolean(blueprint.get('node.master', True)),
         'node_data': yaml_boolean(blueprint.get('node.data', True)),
+        'data_path': yaml_boolean(blueprint.get('node.data_path', '/var/lib/elasticsearch')),
         'network_host': blueprint.get('node.bind', '_local_'),
         'heap_size': blueprint.get('node.heap_size', '256m'),
         'number_of_shards': blueprint.get('default_shards', '5'),
@@ -147,8 +150,8 @@ def configure():
     debian.mkdir(service_dir)
     changes += blueprint.upload('./override.conf', service_dir + '/override.conf', context)
 
-    if changes:
-        restart()
+    # if changes:
+    #     restart()
 
 
 @task
@@ -157,4 +160,4 @@ def install_plugin(name=None):
         abort('No plugin name given')
 
     with sudo():
-        run('/usr/share/elasticsearch/bin/plugin install {}'.format(name))
+        run('/usr/share/elasticsearch/bin/elasticsearch-plugin install {}'.format(name))

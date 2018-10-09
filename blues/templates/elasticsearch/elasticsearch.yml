@@ -27,7 +27,8 @@ node.data: {{ node_data }}
 #
 # Path to directory where to store the data (separate multiple locations by comma):
 #
-# path.data: /path/to/data
+path.data: {{ data_path }}
+path.logs: /var/log/elasticsearch
 #
 # ----------------------------------- Memory -----------------------------------
 #
