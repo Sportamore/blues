@@ -14,11 +14,17 @@ Logstash Blueprint
         ssl: true                          # Secure communication between forwarder and server (Default: True)
 
         server:                            # The presence of this key will cause the host to be considered a server
-          version: 2.4                     # Version of the server to install (Default: 2.4)
-          elasticsearch_host: localhost    # ES Server address (Default: localhost)
-          auto_disable_conf: True          # Disable any config files not listed in 'config' (Default: True)
+          # branch: 6.x                    # Major Version of logstash (Default: 6.x)
+          # version: latest                # Speciifc version of logstash to install (Default: latest)
+
+          elasticsearch: localhost         # ES Server address (Default: localhost)
+          workers: 2                       # The number of queue worker processes
+          persistent_queue: false          # Usae the new persisted (disk-backed) queue
+
           plugins:                         # Optional community plugins
             - logstash-filter-translate
+
+          auto_disable_conf: True          # Disable any config files not listed in 'config' (Default: True)
           config:                          # Mapping of weight: config_file
             11: input-lumberjack           # Included logstash-forwarder input handler
             12: input-beats                # Included beats input handler
@@ -48,6 +54,7 @@ from refabric.context_managers import sudo, silent
 from refabric.contrib import blueprints
 
 from . import debian
+from .elasticsearch import add_elastic_repo
 
 __all__ = ['setup', 'configure', 'install_plugin', 'enable', 'disable', 'start', 'stop', 'restart']
 
@@ -74,6 +81,7 @@ def setup():
     if is_role('forwarder'):
         install_filebeat()
 
+    # TMP
     configure()
 
 
@@ -83,7 +91,7 @@ def configure():
     Configure Logstash server and/or forwarder
     """
     if is_role('server'):
-        upgrade_server()
+        configure_server()
 
     if is_role('forwarder'):
         configure_filebeat()
@@ -148,31 +156,30 @@ def enable(conf, weight, do_restart=True):
 
 def install_server():
     with sudo():
-        version = blueprint.get('server.version', '2.4')
-        info('Adding apt repository for {} version {}', 'logstash', version)
-        debian.add_apt_repository('https://packages.elastic.co/logstash/{}/debian stable main'.format(version))
+        branch = blueprint.get('server.branch', '6.x')
+        add_elastic_repo(branch)
 
-        info('Adding apt key for Elastic.co')
-        debian.add_apt_key('https://packages.elastic.co/GPG-KEY-elasticsearch')
-
+        version = blueprint.get('server.version', 'latest')
         info('Installing {} version {}', 'logstash', version)
-        debian.apt_get_update()
-        debian.apt_get('install', 'logstash')
+        package = 'logstash' + ('={}'.format(version) if version != 'latest' else '')
+        debian.apt_get('install', package)
 
         # Enable on boot
         debian.add_rc_service('logstash')
 
-        debian.mkdir('/etc/logstash/conf.d')
+        # prep custom folders
+        debian.mkdir(conf_available_path)
+        debian.mkdir(conf_enabled_path)
 
-        # Install plugins
-        plugins = blueprint.get('server.plugins', [])
-        for plugin in plugins:
-            info('Installing logstash "{}" plugin...', plugin)
-            install_plugin(plugin)
+        # # Install plugins
+        # plugins = blueprint.get('server.plugins', [])
+        # for plugin in plugins:
+        #     info('Installing logstash "{}" plugin...', plugin)
+        #     install_plugin(plugin)
 
-        # Create and download SSL cert
-        create_server_ssl_cert()
-        download_server_ssl_cert()
+        # # Create and download SSL cert
+        # create_server_ssl_cert()
+        # download_server_ssl_cert()
 
 
 def create_server_ssl_cert():
@@ -200,16 +207,30 @@ def install_plugin(name=None):
         abort('No plugin name given')
 
     with sudo():
-        run('/opt/logstash/bin/logstash-plugin install {}'.format(name))
+        run('/usr/share/logstash/bin/logstash-plugin install {}'.format(name))
 
 
-def configure_server(config, auto_disable_conf=True, **context):
-    context.setdefault('ssl', True)
-    context.setdefault('elasticsearch_host', 'localhost')
+def configure_server():
+    uploads = []
 
-    uploads = blueprint.upload('./server/', '/etc/logstash/', context)
+    # Configure the logstash service
+    persistent_queue = blueprint.get('server.persistent_queue', False)
+    service_context = {
+        'pipeline_workers': blueprint.get('server.workers', 2),
+        'queue_type': 'persisted' if persistent_queue else 'memory',
+    }
+    uploads += blueprint.upload('./logstash.yml', logstash_root, service_context)
+
+    # Provision all available configurations
+    config_context = {
+        'ssl': blueprint.get('ssl', True),
+        'elasticsearch': blueprint.get('server.elasticsearch', 'localhost')
+    }
+    uploads += blueprint.upload('./conf/', conf_available_path, config_context)
 
     # Disable previously enabled conf not configured through config in settings
+    config = blueprint.get('server.config', {})
+    auto_disable_conf = blueprint.get('server.auto_disable_conf', True)
     changes = []
     if auto_disable_conf:
         with silent():
@@ -225,21 +246,7 @@ def configure_server(config, auto_disable_conf=True, **context):
         changed = enable(conf, weight, do_restart=False)
         changes.append(changed)
 
-    return bool(uploads or any(changes))
-
-
-def upgrade_server():
-    config = blueprint.get('server.config', {})
-    auto_disable_conf = blueprint.get('server.auto_disable_conf', True)
-    context = {
-        'ssl': blueprint.get('ssl', True),
-        'elasticsearch_host': blueprint.get('server.elasticsearch_host', '127.0.0.1')
-    }
-
-    changed = configure_server(config, auto_disable_conf=auto_disable_conf, **context)
-
-    # Restart logstash if new templates or any conf has been enabled/disabled
-    if changed:
+    if uploads or any(changes):
         restart('server')
 
 
@@ -304,9 +311,7 @@ def configure_filebeat():
         'filebeat': yaml.dump(filebeat_cfg)
     }
 
-    uploads = blueprint.upload('./forwarder/',
-                               '/etc/filebeat/',
-                               context=context)
+    uploads = blueprint.upload('./filebeat.yml', '/etc/filebeat/', context=context)
 
     ssl_path = 'ssl/logstash.crt'
     if not os.path.exists(blueprint.get_user_template_path(ssl_path)):
