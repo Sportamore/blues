@@ -222,10 +222,14 @@ def configure_server():
     uploads += blueprint.upload('./logstash.yml', logstash_root, service_context)
 
     # Provision all available configurations
+    elasticsearch = blueprint.get('server.elasticsearch', 'localhost')
     config_context = {
         'ssl': blueprint.get('ssl', True),
-        'elasticsearch': blueprint.get('server.elasticsearch', 'localhost')
+        'elasticsearch': (
+            elasticsearch if isinstance(elasticsearch, list) else [elasticsearch]
+        )
     }
+
     uploads += blueprint.upload('./conf/', conf_available_path, config_context)
 
     # Disable previously enabled conf not configured through config in settings
@@ -235,7 +239,12 @@ def configure_server():
     if auto_disable_conf:
         with silent():
             enabled_conf_links = run('ls {}'.format(conf_enabled_path)).split()
-        conf_prospects = ['{}-{}.conf'.format(str(weight).zfill(2), conf) for weight, conf in config.iteritems()]
+
+        conf_prospects = [
+            '{}-{}.conf'.format(str(weight).zfill(2), conf)
+            for weight, conf in config.iteritems()
+        ]
+
         for link in enabled_conf_links:
             if link not in conf_prospects:
                 changed = disable(link, do_restart=False)
