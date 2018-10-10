@@ -11,11 +11,14 @@ Kibana Blueprint
 
     settings:
       kibana:
-        version: 4.6                   # Version of kibana to install (Required)
-        elasticsearch_host: localhost  # Elasticsearch server target (Default: localhost)
+        # branch: 6.x                  # Major Version of kibana (Default: 6.x)
+        # version: latest              # Speciifc version of kibana to install (Default: latest)
+        name: kibana                   # Human-readable name of the instance Default: Kibana)
+        host: localhost                # Listen host (Default: localhost)
+        port: 5601                     # Listen port (Default: 5601)
+        elasticsearch: localhost       # Elasticsearch server target (Default: localhost)
         basepath: ""                   # External url prefix (must not end with slash)
-        landing_page: discover         # Kibana app to load by default
-        reporting_secret: secret_key   # Required by reporting plugin
+        default_app: home              # Kibana app to load by default
         plugins:                       # Optional list of plugins to install
           - elasticsearch/marvel/latest
 
@@ -28,6 +31,7 @@ from refabric.context_managers import sudo
 from refabric.contrib import blueprints
 
 from . import debian
+from .elasticsearch import add_elastic_repo
 
 __all__ = ['start', 'stop', 'restart', 'setup', 'configure', 'install_plugin']
 
@@ -53,16 +57,13 @@ def setup():
 
 def install():
     with sudo():
-        version = blueprint.get('version', '4.6')
-        info('Adding apt repository for {} version {}', 'kibana', version)
-        debian.add_apt_repository('https://packages.elastic.co/kibana/{}/debian stable main'.format(version))
+        branch = blueprint.get('branch', '6.x')
+        add_elastic_repo(branch)
 
-        info('Adding apt key for {}', 'Elastic.co')
-        debian.add_apt_key('https://packages.elastic.co/GPG-KEY-elasticsearch')
-
+        version = blueprint.get('version', 'latest')
         info('Installing {} version {}', 'kibana', version)
-        debian.apt_get_update()
-        debian.apt_get('install', 'kibana')
+        package = 'kibana' + ('={}'.format(version) if version != 'latest' else '')
+        debian.apt_get('install', package)
 
         # Enable on boot
         debian.add_rc_service('kibana', priorities='defaults 95 10')
@@ -79,12 +80,14 @@ def configure():
     Configure Kibana
     """
     context = {
-        'elasticsearch_host': blueprint.get('elasticsearch_host', 'localhost'),
+        'name': blueprint.get('name', "Kibana"),
+        'host': blueprint.get('host', 'localhost'),
+        'elasticsearch': blueprint.get('elasticsearch', 'localhost'),
         'basepath': blueprint.get('basepath', ''),
-        'landing_page': blueprint.get('landing_page', 'discover'),
-        'reporting_secret': blueprint.get('reporting_secret', 'secret_key')
+        'default_app': blueprint.get('default_app', 'home')
     }
-    config = blueprint.upload('./kibana.yml', '/opt/kibana/config/', context)
+    context["rewritebasepath"] = "true" if context['basepath'] != '' else "false"
+    config = blueprint.upload('./kibana.yml', '/etc/kibana/', context)
 
     if config:
         restart()
@@ -92,17 +95,8 @@ def configure():
 
 @task
 def install_plugin(name=None):
-    """
-    Install a single kibana plugin
-    """
     if not name:
         abort('No plugin name given')
 
-    name_parts = name.split('/')
-
-    output = run('/opt/kibana/bin/kibana plugin --remove {}'.format(name_parts[1]))
-    if output.return_code != 0:
-        info('Removed previously installed plugin "{}"', name_parts[1])
-
-    info('Installing kibana plugin: "{}" ...', name_parts[1])
-    run('/opt/kibana/bin/kibana plugin --install {}'.format(name))
+    with sudo():
+        run('/usr/share/kibana/bin/kibana-plugin install {}'.format(name))
