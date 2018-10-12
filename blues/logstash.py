@@ -64,6 +64,7 @@ blueprint = blueprints.get(__name__)
 logstash_root = '/etc/logstash'
 conf_available_path = os.path.join(logstash_root, 'conf.available')
 conf_enabled_path = os.path.join(logstash_root, 'conf.d')
+grokker_path = os.path.join(logstash_root, 'patterns')
 
 
 def is_role(role):
@@ -218,10 +219,13 @@ def configure_server():
     service_context = {
         'pipeline_workers': blueprint.get('server.workers', 2),
         'queue_type': 'persisted' if persistent_queue else 'memory',
+        'metrics_host': blueprint.get('server.metrics_host', 'localhost'),
+        'metrics_port': blueprint.get('server.metrics_port', 9600),
     }
     uploads += blueprint.upload('./logstash.yml', logstash_root, service_context)
+    uploads += blueprint.upload('./patterns/', grokker_path)
 
-    # Provision all available configurations
+    # Provision filters
     elasticsearch = blueprint.get('server.elasticsearch', 'localhost')
     config_context = {
         'ssl': blueprint.get('ssl', True),
