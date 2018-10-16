@@ -46,7 +46,6 @@ from refabric.context_managers import sudo, silent
 from refabric.contrib import blueprints
 
 from . import debian
-from .elasticsearch import add_elastic_repo
 
 __all__ = ['setup', 'configure', 'install_plugin', 'start', 'stop', 'restart']
 
@@ -80,6 +79,8 @@ def setup():
     """
     Setup Logstash server
     """
+    from .elasticsearch import add_elastic_repo
+
     with sudo():
         branch = blueprint.get('branch', '6.x')
         add_elastic_repo(branch)
