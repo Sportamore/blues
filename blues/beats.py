@@ -107,7 +107,7 @@ def configure():
                 {
                     'enabled': False
                 } if not logstash_hosts else {
-                    'hosts': ['{}:5050'.format(host) for host in logstash_hosts]
+                    'hosts': ['{}:5044'.format(host) for host in logstash_hosts]
                 }
             )
         }),
