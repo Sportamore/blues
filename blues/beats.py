@@ -62,8 +62,7 @@ def service(target=None, action=None):
     """
     for beat in ('filebeat', 'metricbeat'):
         if is_beat(beat):
-            debian.service('beat', action, check_status=False)
-
+            debian.service(beat, action, check_status=False)
 
 start = task(partial(service, action='start'))
 stop = task(partial(service, action='stop'))
