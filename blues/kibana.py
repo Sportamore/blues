@@ -65,6 +65,8 @@ def install():
         package = 'kibana' + ('={}'.format(version) if version != 'latest' else '')
         debian.apt_get('install', package)
 
+        debian.mkdir('/var/log/kibana', owner="kibana")
+
         # Enable on boot
         debian.add_rc_service('kibana', priorities='defaults 95 10')
 
