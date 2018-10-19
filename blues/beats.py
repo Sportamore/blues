@@ -157,8 +157,7 @@ def configure():
         module_changes += update_modules('metricbeat')
 
     if uploads or module_changes:
-        # restart()
-        pass
+        restart()
 
 
 def update_modules(beat):
