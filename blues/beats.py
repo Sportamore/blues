@@ -121,11 +121,11 @@ def configure():
     if is_beat('filebeat'):
         inputs = blueprint.get('filebeat.inputs', {})
         input_configs = []
-        for input_type, input_spec in inputs.iteritems():
+        for doc_type, input_spec in inputs.iteritems():
             input_conf = {
                 'fields_under_root': True,
                 'fields': {
-                    'application': input_type
+                    'type': doc_type
                 }
             }
 
