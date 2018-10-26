@@ -17,15 +17,16 @@ This blueprint configures system-wide shell settings and templates.
 
 """
 from fabric.decorators import task
-from fabric.utils import warn
+from fabric.utils import warn, abort
 
 from refabric.api import info
 from refabric.contrib import blueprints
-from refabric.context_managers import sudo
+from refabric.context_managers import sudo, silent, hide_prefix
+from refabric.operations import run
 
 from blues import debian
 
-__all__ = ['setup', 'configure']
+__all__ = ['setup', 'configure', 'grep']
 
 blueprint = blueprints.get(__name__)
 
@@ -76,3 +77,20 @@ def configure():
     blueprint.upload('./bashrc', '/root/.bashrc', context)
     blueprint.upload('./bash_profile', '/root/.bash_profile')
     blueprint.upload('./bash_aliases', '/root/.bash_aliases')
+
+
+@task
+def grep(needle, haystack, flags="i"):
+    """
+    Basic file grepping, case-insensitive by default
+    """
+
+    if not needle and haystack:
+        abort('Missing arguments')
+
+    with hide_prefix(), sudo():
+        run('grep{} -e "{}" {}'.format(
+            ' -{}'.format(flags) if flags else '',
+            needle,
+            haystack))
+
