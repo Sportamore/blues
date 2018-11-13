@@ -34,14 +34,12 @@ def setup():
     from .deploy import install_project, install_virtualenv, \
         install_requirements, install_providers
     from .project import requirements_txt, use_virtualenv
-    from .python import update_pip
 
     install_project()
 
     if use_virtualenv():
         install_virtualenv()
-        update_pip()
-        install_requirements(requirements_txt())
+        install_requirements(requirements_txt(), update_pip=True)
 
     install_providers()
     configure_providers()
