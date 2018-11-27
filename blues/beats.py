@@ -20,7 +20,7 @@ Beats Blueprint
         environment: undefined           # An optional environment to tag emssages with
 
         filebeat:
-          plugins:                       # One or more plugins to activate
+          modules:                       # One or more modules to activate
             - system
 
           inputs:                        # One or more file blocks
@@ -28,7 +28,7 @@ Beats Blueprint
               - '/var/log/*.log'         # Wildcards are supported
 
         metricbeat:
-          plugins:                       # One or more plugins to activate
+          modules:                       # One or more modules to activate
             - system
 
 """
@@ -46,7 +46,7 @@ from refabric.contrib import blueprints
 
 from . import debian
 
-__all__ = ['setup', 'configure', 'start', 'stop', 'restart']
+__all__ = ['setup', 'configure', 'start', 'stop', 'restart', 'status']
 
 
 blueprint = blueprints.get(__name__)
@@ -64,13 +64,16 @@ def service(target=None, action=None):
         if is_beat(beat):
             debian.service(beat, action, check_status=False)
 
+
 start = task(partial(service, action='start'))
 stop = task(partial(service, action='stop'))
 restart = task(partial(service, action='restart'))
+status = task(partial(service, action='status'))
 
 start.__doc__ = 'Start beats'
 stop.__doc__ = 'Stop beats'
 restart.__doc__ = 'Restart beats'
+status.__doc__ = 'Get beats status'
 
 
 @task
@@ -91,7 +94,10 @@ def setup():
                 package = beat + ('={}'.format(version) if version != 'latest' else '')
                 debian.apt_get('install', package)
 
+                debian.add_rc_service(beat)
+
     configure()
+    start()
 
 
 @task
