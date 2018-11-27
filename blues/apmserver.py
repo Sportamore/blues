@@ -16,6 +16,9 @@ APM Server Blueprint
 
         host: localhost                  # Set the host address specifically, (Default localhost)
         port: 8200                       # Event listening port
+
+        token: secrettoken               # Client authentication token (Default: None)
+
         elasticsearch:                   # ES Server(s) (Default: localhost)
           - localhost
 
@@ -75,7 +78,8 @@ def configure():
     es_hosts = ["{}:9200".format(h) for h in blueprint.get('elasticsearch', [])]
     context = {
         'host': "{}:8200".format(blueprint.get('host', 'localhost')),
-        'es_hosts': yaml.dump(es_hosts or ['localhost:9200'])
+        'es_hosts': yaml.dump(es_hosts or ['localhost:9200']),
+        'token': blueprint.get('token', '')
     }
 
     changes = blueprint.upload('./apm-server.yml', '/etc/apm-server/', context=context)

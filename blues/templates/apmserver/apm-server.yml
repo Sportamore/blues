@@ -38,7 +38,8 @@ apm-server:
   # send their token in the following format: Authorization: Bearer <secret-token>.
   # It is recommended to use an authorization token in combination with SSL enabled,
   # and save the token in the beats keystore.
-  #secret_token:
+  secret_token: '{{ token }}'
+
   #ssl.enabled: false
   #ssl.certificate : "path/to/cert"
   #ssl.key : "path/to/private_key"
