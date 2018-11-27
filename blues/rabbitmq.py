@@ -20,8 +20,8 @@ from fabric.operations import prompt
 
 from . import debian
 
-__all__ = ['start', 'stop', 'restart', 'reload', 'setup', 'configure', 'ctl',
-           'reset', 'useradd']
+__all__ = ['start', 'stop', 'restart', 'reload', 'setup', 'setup_users','configure',
+           'ctl', 'reset', 'useradd']
 
 
 blueprint = blueprints.get(__name__)
@@ -94,6 +94,14 @@ def configure():
                    or [])
     if uploads:
         restart()
+
+
+@task
+def setup_users():
+    for username, password in blueprint.get('users', {}).items():
+        ctl("add_user '{}' '{}'".format(username, password))
+        ctl("add_vhost '{}'".format(username))
+        ctl("set_permissions -p '{}' '{}' '.*' '.*' '.*'".format(username, username))
 
 
 @task
