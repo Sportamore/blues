@@ -24,8 +24,8 @@ from refabric.operations import run
 from refabric.utils import info
 
 """
-Startup options systemd and none systemd 
-"""    
+Startup options systemd and none systemd
+"""
 boot_options_14=['nobootwait','bootwait']
 boot_options_16=['x-systemd.requires','x-systemd.before','x-systemd.after','x-systemd.requires-mounts-for','x-systemd.device-bound','x-systemd.automount','x-systemd.idle-timeout','x-systemd.device-timeout','x-systemd.mount-timeout','x-systemd.makefs','x-systemd.growfs,_netdev','x-initrd.mount']
 boot_options_16_more=['requires','before','after','requires-mounts-for','idle-timeout','device-timeout','mount-timeout']
@@ -612,7 +612,7 @@ def validate_boot_options(options):
     """
     if lsb_release() == '14.04':
         none_boot_options_check=boot_options_16
-    else: 
+    else:
         none_boot_options_check=boot_options_14
     for option in options.split(','):
         stript=0
@@ -620,10 +620,10 @@ def validate_boot_options(options):
             option = option.split('=')[0]
             stript=1
         if option in none_boot_options_check:
-            warn(option +" is not a valid for "+lsb_release()+" check boot option in your yaml") 
+            warn(option +" is not a valid for "+lsb_release()+" check boot option in your yaml")
             if lsb_release() == '14.04':
                 info("Valid boot options is:"+str(boot_options_14))
-            else: 
+            else:
                 info("Valid boot options is:"+str(boot_options_16))
             exit()
         if stript==0:

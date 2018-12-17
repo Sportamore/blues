@@ -16,7 +16,8 @@ Logstash Blueprint
         # branch: 6.x                    # Major Version of logstash (Default: 6.x)
         # version: latest                # Speciifc version of logstash to install (Default: latest)
 
-        elasticsearch: localhost         # ES Server address (Default: localhost)
+        es_hosts:
+          - localhost                    # ES Server address (Default: localhost)
         workers: 2                       # The number of queue worker processes
         persistent_queue: false          # Usae the new persisted (disk-backed) queue
 
@@ -101,10 +102,6 @@ def setup():
             info('Installing logstash "{}" plugin...', plugin)
             install_plugin(plugin)
 
-        # Create and download SSL cert
-        create_server_ssl_cert()
-        download_server_ssl_cert()
-
     configure()
 
 
@@ -136,12 +133,10 @@ def configure():
     uploads += blueprint.upload('./patterns/', grokker_path)
 
     # Provision filters
-    elasticsearch = blueprint.get('elasticsearch', 'localhost')
+    es_hosts = blueprint.get('es_hosts', 'localhost')
     config_context = {
         'ssl': blueprint.get('ssl', False),
-        'elasticsearch': (
-            elasticsearch if isinstance(elasticsearch, list) else [elasticsearch]
-        )
+        'es_hosts': es_hosts,
     }
 
     uploads += blueprint.upload('./conf/', conf_available_path, config_context)
@@ -184,22 +179,3 @@ def update_filters():
             debian.ln(source, target)
 
     return changes
-
-
-def create_server_ssl_cert():
-    with sudo():
-        info('Generating SSL certificate...')
-        debian.mkdir('/etc/pki/tls/certs')
-        debian.mkdir('/etc/pki/tls/private')
-        with cd('/etc/pki/tls'):
-            hostname = debian.hostname()
-            key = 'private/logstash.key'
-            crt = 'certs/logstash.crt'
-            run('openssl req -x509 -batch -nodes -days 3650 -newkey rsa:2048 '
-                '-keyout {} '
-                '-out {} '
-                '-subj "/CN={}"'.format(key, crt, hostname))
-
-
-def download_server_ssl_cert(destination='ssl/'):
-    blueprint.download('/etc/pki/tls/certs/logstash.crt', destination)

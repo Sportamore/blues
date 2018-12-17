@@ -19,7 +19,7 @@ APM Server Blueprint
 
         token: secrettoken               # Client authentication token (Default: None)
 
-        elasticsearch:                   # ES Server(s) (Default: localhost)
+        es_hosts:                   # ES Server(s) (Default: localhost)
           - localhost
 
 """
@@ -75,7 +75,7 @@ def configure():
     """
     Configure apm-server
     """
-    es_hosts = ["{}:9200".format(h) for h in blueprint.get('elasticsearch', [])]
+    es_hosts = ["{}:9200".format(h) for h in blueprint.get('es_hosts', [])]
     context = {
         'host': "{}:8200".format(blueprint.get('host', 'localhost')),
         'es_hosts': yaml.dump(es_hosts or ['localhost:9200']),

@@ -25,6 +25,7 @@ Kibana Blueprint
 """
 from fabric.decorators import task
 from fabric.utils import abort
+from fabric.state import env
 
 from refabric.api import run, info
 from refabric.context_managers import sudo
@@ -84,7 +85,7 @@ def configure():
     context = {
         'name': blueprint.get('name', "Kibana"),
         'host': blueprint.get('host', 'localhost'),
-        'elasticsearch': blueprint.get('elasticsearch', 'localhost'),
+        'es_host': blueprint.get('es_host', env.host_string),
         'basepath': blueprint.get('basepath', ''),
         'default_app': blueprint.get('default_app', 'home')
     }
