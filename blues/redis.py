@@ -11,20 +11,22 @@ Redis Blueprint
 
     settings:
       redis:
-        # bind: 0.0.0.0  # Set the bind address specifically (Default: 127.0.0.1)
+        # bind: 127.0.0.1       # Set the bind address
+        # bgsave: False         # Background snapshots, can be a singe save statement or a list of them
+        # appendonly: False
+        # maxclients: 10000
+        # maxmemory: 1024mb
+        # maxmemory_policy: noeviction
 
 """
-import re
 from fabric.decorators import task
-from fabric.utils import abort
-
-from refabric.context_managers import sudo
+from refabric.context_managers import sudo, silent, hide_prefix
 from refabric.contrib import blueprints
+from refabric import api
 
 from . import debian
-from refabric.operations import run
 
-__all__ = ['start', 'stop', 'restart', 'setup', 'configure']
+__all__ = ['start', 'stop', 'restart', 'setup', 'configure', 'info']
 
 
 blueprint = blueprints.get(__name__)
@@ -48,43 +50,39 @@ def install():
         debian.apt_get('install', 'redis-server')
 
 
-def get_installed_version():
-    """
-    Get installed version as tuple.
-
-    Parsed output format:
-    Redis server v=2.8.4 sha=00000000:0 malloc=jemalloc-3.4.1 bits=64 build=a...
-    """
-    retval = run('redis-server --version')
-    m = re.match('.+v=(?P<version>[0-9\.]+).+', retval.stdout)
-    try:
-        _v = m.group('version')
-        v = tuple(map(int, str(_v).split('.')))
-        return v
-    except IndexError:
-        abort('Failed to get installed redis version')
-
-
 @task
 def configure():
     """
     Configure Redis
     """
     context = {
-        'bind': blueprint.get('bind', '127.0.0.1')
+        'bind': blueprint.get('bind', '127.0.0.1'),
+        'bgsave': ['""', ],
+        'maxclients': blueprint.get('maxclients', 10000),
+        'maxmemory': blueprint.get('maxmemory', '1024mb'),
+        'maxmemory_policy': blueprint.get('maxmemory_policy', 'noeviction'),
+        'appendonly': 'yes' if blueprint.get('appendonly', False) else 'no',
     }
 
-    version = get_installed_version()
+    bgsave = blueprint.get('bgsave', False)
+    if bgsave:
+        if isinstance(bgsave, str):
+            bgsave = [bgsave, ]
 
-    if version <= (2, 4):
-        config = 'redis-2.4.conf'
-    elif version < (3, 0):
-        config = 'redis-2.8.conf'
-    else:
-        config = 'redis-3.conf'
+        context['bgsave'] = bgsave
 
-    uploads = blueprint.upload(config, '/etc/redis/redis.conf', context)
+    uploads = blueprint.upload('redis.conf', '/etc/redis/redis.conf', context)
     debian.chmod('/etc/redis/redis.conf', mode=640, owner='redis', group='redis')
 
     if uploads:
         restart()
+
+
+@task
+def info(scope=''):
+    """
+    Get runtime information from redis itself
+    """
+    with silent(), hide_prefix():
+        output = api.run('redis-cli info ' + scope)
+        api.info(output)
