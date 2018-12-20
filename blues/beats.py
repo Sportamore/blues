@@ -14,6 +14,7 @@ Beats Blueprint
         # branch: 6.x                    # Major Version of beats (Default: 6.x)
         # version: latest                # Speciifc version of beats to install (Default: latest)
 
+        loadbalance: False               # Distribute events across logstash servers
         logstash:                        # One or more target hosts
           - some.host.tld
 
@@ -112,7 +113,8 @@ def configure():
                 {
                     'enabled': False
                 } if not logstash_hosts else {
-                    'hosts': ['{}:5044'.format(host) for host in logstash_hosts]
+                    'hosts': ['{}:5044'.format(host) for host in logstash_hosts],
+                    'loadbalance': blueprint.get('loadbalance', False)
                 }
             )
         }),
