@@ -24,15 +24,12 @@ APM Server Blueprint
 
 """
 import yaml
-import os.path
 from functools import partial
 
-from fabric.context_managers import cd
 from fabric.decorators import task
-from fabric.utils import warn, abort
 
-from refabric.api import run, info
-from refabric.context_managers import sudo, silent
+from refabric.api import info
+from refabric.context_managers import sudo
 from refabric.contrib import blueprints
 
 from . import debian
@@ -66,6 +63,9 @@ def setup():
         info('Installing {} version {}', 'apm-server', version)
         package = 'apm-server' + ('={}'.format(version) if version != 'latest' else '')
         debian.apt_get('install', package)
+
+        # Enable on boot
+        debian.add_rc_service('apm-server', priorities='defaults 95 10')
 
     configure()
 
