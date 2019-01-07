@@ -1,0 +1,22 @@
+actions:
+{% for action in actions %}
+    {{ loop.index }}:
+      action: {{ action.action }}
+      description: "blues.curator:delete, prefix: {{ action.prefix }}, days: {{ action.days_gt }}"
+
+      options:
+        continue_if_exception: false
+        ignore_empty_list: True
+
+      filters:
+        - filtertype: pattern
+          kind: prefix
+          value: {{ action.prefix }}
+
+        - filtertype: age
+          source: name
+          direction: older
+          timestring: '%Y.%m.%d'
+          unit: days
+          unit_count: {{ action.days_gt }}
+{% endfor %}
