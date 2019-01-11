@@ -9,6 +9,12 @@ BIND Blueprint
     blueprints:
       - blues.tuned
 
+      settings:
+          vm: 
+            - 'transparent_hugepages=never'
+          sysctl:
+            - 'vm.swappiness=1'
+
 
     role/tuned/tuned/profilename/tuned.conf
     Sample of config file
@@ -50,6 +56,7 @@ blueprint = blueprints.get(__name__)
 
 config_dir = '/etc/'
 tuned_dir = os.path.join(config_dir, 'tuned/')
+sportamore_dynamic = os.path.join(tuned_dir, 'sportamore-dynamic/')
 path=os.getcwd()
 
 @task
@@ -97,7 +104,11 @@ def configure():
         uploads = []
 
         # Configure application
+        vm=blueprint.get('vm',[])
+        sysctl=blueprint.get('sysctl',[])
+        bootloader=blueprint.get('bootloader',[])
         uploads.append(blueprint.upload('./tuned/', tuned_dir))
+        uploads.append(blueprint.upload('./tuned.conf',sportamore_dynamic,{"vm" : vm,"sysctl" : sysctl,"bootloader" : bootloader}))
 
         info("In order to active a profile run fab -E enviroment -R role tuned.set:value=profilename")
         info("You can list avalible profiles with fab -E enviroment -R role tuned.list ")
