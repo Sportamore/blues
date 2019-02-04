@@ -16,6 +16,7 @@ This blueprint configures system-wide shell settings and templates.
         host_color: red     # Display color of the hostname
 
 """
+import os
 from fabric.decorators import task
 from fabric.utils import warn, abort
 
@@ -26,7 +27,7 @@ from refabric.operations import run
 
 from blues import debian
 
-__all__ = ['setup', 'configure', 'grep']
+__all__ = ['setup', 'configure', 'configure_profile', 'grep']
 
 blueprint = blueprints.get(__name__)
 
@@ -45,8 +46,7 @@ def install():
         debian.apt_get('install', 'bash-completion:')
 
 
-@task
-def configure():
+def get_host_color():
     ansi_colors = {
         'black': '\[\e[30;49m\]',
         'red': '\[\e[31;49m\]',
@@ -64,19 +64,21 @@ def configure():
         warn('Invalid host color, defaulting to green')
         cfg_color = 'green'
 
-    context = {
-        'host_color': ansi_colors[cfg_color]
-    }
+    return ansi_colors[cfg_color]
 
-    info('Configuring profile template')
-    blueprint.upload('./bashrc', '/etc/skel/.bashrc', context)
-    blueprint.upload('./bash_profile', '/etc/skel/.bash_profile')
-    blueprint.upload('./bash_aliases', '/etc/skel/.bash_aliases')
 
-    info('Configuring root profile')
-    blueprint.upload('./bashrc', '/root/.bashrc', context)
-    blueprint.upload('./bash_profile', '/root/.bash_profile')
-    blueprint.upload('./bash_aliases', '/root/.bash_aliases')
+@task
+def configure():
+    configure_profile('/etc/skel', dotenv=False)
+    configure_profile('/root', dotenv=False)
+
+
+def configure_profile(home_dir, dotenv=False):
+    info('Configuring profile {}', home_dir)
+    blueprint.upload('.', home_dir, {
+        'host_color': get_host_color(),
+        'dotenv': dotenv
+    })
 
 
 @task

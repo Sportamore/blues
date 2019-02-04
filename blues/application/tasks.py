@@ -244,12 +244,16 @@ def configure_providers(force_reload=False):
 @task
 def configure_environment():
     from .project import project_home, project_name, sudo_project, git_repository_path
+    from ..shell import configure_profile
 
     context = {"project_name": project_name()}
     blueprint.upload('dotenv/dotenv',
                      os.path.join(project_home(), '.env'),
                      context=context,
                      user=project_name())
+
+    # Exports dotenv to the app user's interactive sessions
+    configure_profile(project_home(), dotenv=True)
 
     config = blueprint.get('config', None)
     if config:
