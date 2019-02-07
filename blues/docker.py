@@ -68,6 +68,14 @@ def install():
         info('Installing {}', package)
         debian.apt_get('install', package)
 
+        if debian.lsb_release() == '14.04':
+            blueprint.upload('./docker.default', '/etc/default/docker')
+
+        else:
+            blueprint.upload('./docker.service',
+                             '/etc/systemd/system/multi-user.target.wants/docker.service')
+            debian.systemd_daemon_reload()
+
 
 @task
 def configure():
@@ -77,5 +85,6 @@ def configure():
     daemon_json = json.dumps(blueprint.get('config', '') or {})
 
     changes = blueprint.upload('./daemon.json', '/etc/docker/', context={"config": daemon_json})
+
     if changes:
         restart()
