@@ -110,6 +110,16 @@ def pip(command, *options, **kwargs):
                    log_file=pip_log_file), pty=False)
 
 
+def pip_sync(manifest, quiet=False):
+    pip('install', 'pip-tools', quiet=quiet)
+
+    options = ""
+    if quiet:
+        options += ' -q'
+
+    run('pip-sync{} {}'.format(options, manifest), pty=False)
+
+
 @task
 def update_pip(quiet=False):
     info('Updating pip')

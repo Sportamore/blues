@@ -12,10 +12,10 @@ from refabric.utils import info
 from .. import git
 
 __all__ = [
-    'app_root', 'project_home', 'git_root', 'use_virtualenv', 'virtualenv_path',
-    'git_repository', 'git_repository_path', 'python_path', 'sudo_project',
-    'requirements_txt', 'use_python', 'static_base', 'project_name',
-    'releases', 'remote_head', 'github_repo', 'github_link'
+    'app_root', 'project_home', 'git_root', 'use_virtualenv', 'use_pip_sync',
+    'virtualenv_path', 'git_repository', 'git_repository_path', 'python_path',
+    'sudo_project', 'requirements_txt', 'use_python', 'static_base',
+    'project_name', 'releases', 'remote_head', 'github_repo', 'github_link'
 ]
 
 blueprint = blueprints.get('blues.app')
@@ -25,6 +25,9 @@ use_python = lambda: blueprint.get('use_python', True)
 
 # install virtualenv and python dependencies
 use_virtualenv = lambda: blueprint.get('use_virtualenv', True) and use_python()
+
+# install virtualenv and python dependencies
+use_pip_sync = lambda: blueprint.get('pip_sync', False) and use_python()
 
 # Should we set up /srv/www?
 use_static = lambda: blueprint.get('use_static', True)

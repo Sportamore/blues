@@ -295,9 +295,11 @@ def get_installation_method(filename):
 
     :return: 'pip' or 'setuptools'
     """
+    from .project import use_pip_sync
+
     if filename.endswith('.txt') or \
             filename.endswith('.pip'):
-        return 'pip'
+        return 'pip-sync' if use_pip_sync() else 'pip'
 
     if os.path.basename(filename) == 'setup.py':
         return 'setuptools'
@@ -312,28 +314,28 @@ def install_requirements(installation_file=None, update_pip=False):
     if not installation_file:
         installation_file = requirements_txt()
 
-    with sudo_project():
-        path = virtualenv_path()
+    src_path = git_repository_path()
+    path = virtualenv_path()
+    installation_method = get_installation_method(installation_file)
+    with sudo_project(), virtualenv.activate(path), cd(src_path):
+        if update_pip:
+            python.update_pip(quiet=True)
 
-        with virtualenv.activate(path):
-            installation_method = get_installation_method(installation_file)
-            if update_pip:
-                python.update_pip(quiet=True)
+        if installation_method == 'pip':
+            info('Installing requirements from: {}', installation_file)
+            python.pip('install', '-r', installation_file, quiet=True)
 
-            if installation_method == 'pip':
-                info('Installing requirements from: {}', installation_file)
-                python.pip('install', '-r', installation_file, quiet=True)
+        elif installation_method == 'pip-sync':
+            info('Syncing requirements from: {}', installation_file)
+            python.pip_sync(installation_file, quiet=True)
 
-            elif installation_method == 'setuptools':
-                src_path = git_repository_path()
+        elif installation_method == 'setuptools':
+            info('Installing directory: {}', src_path)
+            python.pip('install', '-e', src_path, quiet=True)
 
-                info('Installing directory: {}', src_path)
-                python.pip('install', '-e', src_path, quiet=True)
-
-            else:
-                raise ValueError(
-                    '"{}" is not a valid installation file'.format(
-                        installation_file))
+        else:
+            raise ValueError('"{}" is not a valid installation file'.format(
+                             installation_file))
 
 
 def install_or_update_source():
