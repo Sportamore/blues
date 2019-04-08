@@ -82,8 +82,7 @@ def configure():
 
         uploads.append(blueprint.upload('./dhcpd.conf', config_dir,{"scopes" : scopes}))
    
-        warn("It it is importent that the interfaces are configure before you apply the settings")
-        info("In order for the new settings to work you need to reboot the system !!")
+        warn("It it is importent that the interfaces are configure before you apply the settings.\nIn order for the new settings to work you need to reboot the system !!")
 
 def install():
     with sudo():
