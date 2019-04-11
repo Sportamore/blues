@@ -75,7 +75,6 @@ start.__doc__ = 'Start beats'
 stop.__doc__ = 'Stop beats'
 restart.__doc__ = 'Restart beats'
 status.__doc__ = 'Get beats status'
-default_close_timeout="15m"
 
 @task
 def setup():
@@ -135,16 +134,11 @@ def configure():
                     'type': doc_type
                 }
             }
+            input_conf["close_timeout"] = "15m" 
             if isinstance(input_spec, list):
                 input_conf['paths'] = input_spec
-                input_conf["close_timeout"] = default_close_timeout
-
             else:
-                if 'close_timeout' in input_spec:
-                    input_conf.update(input_spec)
-                else:
-                    input_conf.update(input_spec)
-                    input_conf["close_timeout"] = default_close_timeout
+                input_conf.update(input_spec)
 
             input_configs.append(input_conf)
 
