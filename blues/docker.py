@@ -73,7 +73,11 @@ def install():
 
         else:
             blueprint.upload('./docker.service',
-                             '/etc/systemd/system/multi-user.target.wants/docker.service')
+                             '/etc/systemd/system/docker.service')
+            debian.ln(
+                '/etc/systemd/system/docker.service',
+                '/etc/systemd/system/multi-user.target.wants/docker.service',
+            )
             debian.systemd_daemon_reload()
 
 
