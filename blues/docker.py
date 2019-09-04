@@ -98,7 +98,7 @@ def configure():
 @task
 def add_scheduled_prune(interval):
     """
-    Set up Cron job to run docker system purge
+    Set up Cron job to run docker system prune
 
     'interval' should be a string with the value of either 'hourly', 'daily', 'weekly' or 'monthly'
     """
@@ -115,7 +115,7 @@ def add_scheduled_prune(interval):
 @task
 def remove_scheduled_prune():
     """
-    Remove Cron job to run docker system purge
+    Remove Cron job to run docker system prune
     """
 
     with sudo():
