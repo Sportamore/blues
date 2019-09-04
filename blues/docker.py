@@ -28,7 +28,8 @@ from refabric.contrib import blueprints
 
 from . import debian
 
-__all__ = ['start', 'stop', 'restart', 'reload', 'setup', 'configure']
+__all__ = ['start', 'stop', 'restart', 'reload', 'setup', 
+          'configure', 'add_scheduled_prune','remove_scheduled_prune']
 
 
 blueprint = blueprints.get(__name__)
@@ -92,3 +93,31 @@ def configure():
 
     if changes:
         restart()
+
+
+@task
+def add_scheduled_prune(interval):
+    """
+    Set up Cron job to run docker system purge
+
+    'interval' should be a string with the value of either 'hourly', 'daily', 'weekly' or 'monthly'
+    """
+
+    if interval in {'hourly', 'daily', 'weekly', 'monthly'}:
+        target_location = "/etc/cron.{}/docker-system-prune.sh".format(interval)
+        with sudo():
+            info('Add recurring purge of Docker containers, images and volumes')
+            blueprint.upload('./docker-system-prune.sh', target_location)
+            debian.chmod(target_location, mode="755")
+    else:
+        raise ValueError("Interval was '{}' but should be one of: 'hourly', 'daily', 'weekly' or 'monthly'".format(interval))
+
+@task
+def remove_scheduled_prune():
+    """
+    Remove Cron job to run docker system purge
+    """
+
+    with sudo():
+        info('Remove recurring purge of Docker containers, images and volumes')
+        debian.rm('/etc/cron.*/docker-system-prune.sh*')
