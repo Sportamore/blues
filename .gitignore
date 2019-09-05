@@ -35,5 +35,6 @@ nosetests.xml
 .project
 .pydevproject
 .idea
+.vscode
 
 docs/source/_themes
