@@ -76,11 +76,13 @@ def add_elastic_repo(branch):
 
 def install():
     with sudo():
-        from blues import java
-        java.install()
-
         branch = blueprint.get('branch', '6.x')
         add_elastic_repo(branch)
+
+        # ES 7 and higher bundles java
+        if branch == '6.x':
+            from blues import java
+            java.install()
 
         version = blueprint.get('version', 'latest')
         info('Installing {} version {}', 'elasticsearch', version)
