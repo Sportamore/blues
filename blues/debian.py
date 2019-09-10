@@ -403,19 +403,19 @@ def systemd_service(name, action='is-enabled'):
 
 
 def add_rc_service(name, priorities='defaults'):
-    if lsb_release() == '16.04':
-        systemd_service(name, 'enable')
+    if lsb_release() == '14.04':
+        update_rc(name, priorities)
 
     else:
-        update_rc(name, priorities)
+        systemd_service(name, 'enable')
 
 
 def remove_rc_service(name):
-    if lsb_release() == '16.04':
-        systemd_service(name, 'disable')
+    if lsb_release() == '14.04':
+        update_rc(name, priorities='remove', force=True)
 
     else:
-        update_rc(name, priorities='remove', force=True)
+        systemd_service(name, 'disable')
 
 
 @task
