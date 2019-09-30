@@ -1,5 +1,5 @@
 """
-BIND Blueprint
+CHECK_MK Bluep1rint
 ===============
 
 **Fabric environment:**
@@ -71,7 +71,7 @@ def install():
             info("Catalog already exists")
         else:
             debian.mkdir("/usr/lib/check_mk_agent")
-            debian.mkdir("/usr/lib/check_mk_agent/plugins")
+               debian.mkdir("/usr/lib/check_mk_agent/plugins")
             info("Catalogs created")
         if uploads:
             debian.chmod("/usr/local/bin/check_mk_agent",mode=755)
@@ -85,9 +85,7 @@ def upload_plugins():
     uploads=[]
     uploads.append(blueprint.upload('plugins/', '/usr/lib/check_mk_agent/plugins'))
     if uploads:
-        #Make all that is not python executable and removes all md5s 
         run("find /usr/lib/check_mk_agent/plugins -not -name '*.py' -exec chmod +x {} \\;")
-        run("find /usr/lib/check_mk_agent/plugins -name '*.md5' -delete")
     with settings(warn_only=True):
         test=run("ls -al /etc/|grep check_mk")
         uploads=[]
