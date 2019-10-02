@@ -42,7 +42,7 @@ from . import debian
 from refabric.operations import run
 
 __all__ = ['start', 'stop', 'restart', 'reload', 'setup', 'configure',
-           'install_plugin']
+           'install_plugin', 'add_elastic_snapshot_repos']
 
 
 blueprint = blueprints.get(__name__)
@@ -115,12 +115,20 @@ def configure():
     cluster_nodes = blueprint.get('cluster.nodes', [])
     cluster_size = len(cluster_nodes)
 
+    cluster_repos = blueprint.get('cluster.repositories', [])
+    repo_locations = []
+    if cluster_repos:
+        for repo in cluster_repos:
+            repo_locations.append('"{}"'.format(cluster_repos[repo]['location']))
+    repo_locations = '[ {} ]'.format(", ".join(repo_locations))
+
     changes = []
 
     context = {
         'cluster_name': blueprint.get('cluster.name', 'elasticsearch'),
         'cluster_size': cluster_size,
         'zen_unicast_hosts': yaml.dump(cluster_nodes) if len(cluster_nodes) else None,
+        'repos': repo_locations if len(repo_locations) else None,
         'node_name': blueprint.get('node.name', hostname),
         'node_master': yaml_boolean(blueprint.get('node.master', True)),
         'node_data': yaml_boolean(blueprint.get('node.data', True)),
@@ -148,6 +156,37 @@ def configure():
 
     if changes:
         restart()
+
+
+@task
+def add_elastic_snapshot_repos():
+    import requests
+
+    repos = blueprint.get('cluster.repositories', [])
+    with silent():
+        hostname = debian.hostname()
+    node_name = blueprint.get('node.name', hostname)
+
+    for repo in repos:
+        repocheck = requests.get(url = 'http://{}:9200/_snapshot/{}'.format(node_name, repo))
+
+        if repocheck.status_code == 404:
+            info("Adding elastic snapshot repository '{}'".format(repo))
+
+            url = 'http://{}:9200/_snapshot/{}'.format(node_name, repo)
+            body = {
+                "type": repos[repo]['type'],
+                "settings": {
+                    "location": repos[repo]['location']
+                }
+            }
+
+            repoadd_reply = requests.put(url = url, json = body)
+            status_code = repoadd_reply.status_code
+            
+            if status_code != 200:
+                abort("Could not add elastic snapshot repository '{}'\nstatus code: {}\nmessage:\n{}".format(
+                    repo, status_code, repoadd_reply.text))
 
 
 @task
