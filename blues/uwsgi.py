@@ -87,7 +87,7 @@ def configure():
     """
     with sudo():
         # Upload service templates
-        if debian.lsb_release() == '16.04':
+        if debian.lsb_release() == '16.04' || debian.lsb_release() == 18.04:
             blueprint.upload('systemd/uwsgi.service', '/etc/systemd/system/uwsgi.service')
             debian.systemd_daemon_reload()
 

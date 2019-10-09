@@ -98,7 +98,7 @@ def configure():
     """
     with sudo():
         # Upload service templates
-        if debian.lsb_release() == '16.04':
+        if debian.lsb_release() == '16.04' || debian.lsb_release() == '18.04':
             uploads = blueprint.upload('systemd/supervisor.service', '/etc/systemd/system/supervisor.service')
             debian.systemd_daemon_reload()
 
