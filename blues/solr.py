@@ -107,12 +107,12 @@ def configure():
     updated_confs = blueprint.upload('solr_home/', '/etc/solr/', user='solr')
 
     context = {'memory': blueprint.get('memory', '512m')}
-    if debian.lsb_release() == '16.04':
+    if debian.lsb_release() == '14.04':
+        updated_init = blueprint.upload('init/', '/etc/init/', context)
+    else:
         updated_init = blueprint.upload('systemd/solr.service', '/etc/systemd/system/', context)
         debian.systemd_daemon_reload()
-
-    else:
-        updated_init = blueprint.upload('init/', '/etc/init/', context)
+        
 
     if updated_confs or updated_init:
         restart()

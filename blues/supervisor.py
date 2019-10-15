@@ -98,14 +98,13 @@ def configure():
     """
     with sudo():
         # Upload service templates
-        if debian.lsb_release() == '16.04' or debian.lsb_release() == '18.04':
-            uploads = blueprint.upload('systemd/supervisor.service', '/etc/systemd/system/supervisor.service')
-            debian.systemd_daemon_reload()
-
-        else:
+        if debian.lsb_release() == '14.04':
             uploads = blueprint.upload('init/supervisor.conf', '/etc/init/supervisor.conf')
             blueprint.upload('init.d/supervisor','/etc/init.d/supervisor')
             debian.chmod('/etc/init.d/supervisor',mode=755)
+        else:
+            uploads = blueprint.upload('systemd/supervisor.service', '/etc/systemd/system/supervisor.service')
+            debian.systemd_daemon_reload()
 
         uploads.extend(blueprint.upload('supervisord.conf', '/etc/') or [])
         uploads.extend(blueprint.upload('programs-available/',

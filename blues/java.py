@@ -51,10 +51,14 @@ def install():
 
             version = blueprint.get('version', '8')
             package = 'oracle-java{}-installer'.format(version)
+            info('Install Java JDK')
 
         else:
-            info('Falling back to Java 7')
-            package = 'java7-jdk'
-
-        info('Install Java JDK')
+            info('Openjdk')
+            version = blueprint.get('version', '8')
+            package = 'openjdk-{}-jdk'.format(version)
+            package2 = 'openjdk-{}-jre'.format(version)
+            info('Install Java JDK')
+            debian.apt_get('install', package2)
+        
         debian.apt_get('install', package)
