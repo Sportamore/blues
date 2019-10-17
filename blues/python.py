@@ -81,7 +81,10 @@ def install():
                            py_pkg(v_major, '-pip'))
 
         # Install python default pip.
-        run('easy_install pip')
+        if debian.lsb_release() == '18.04':
+            info("easy_install not avalible in 18.04")
+        else:
+            run('easy_install pip')
 
         # Create pip log file
         run('touch {}'.format(pip_log_file))
