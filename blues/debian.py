@@ -403,7 +403,7 @@ def systemd_service(name, action='is-enabled'):
 
 
 def add_rc_service(name, priorities='defaults'):
-    if lsb_release() == '14.04':
+    if lsb_release() == '14.04' or lsb_release() == '12.04':
         update_rc(name, priorities)
 
     else:
@@ -411,7 +411,7 @@ def add_rc_service(name, priorities='defaults'):
 
 
 def remove_rc_service(name):
-    if lsb_release() == '14.04':
+    if lsb_release() == '14.04' or lsb_release() == '12.04':
         update_rc(name, priorities='remove', force=True)
 
     else:

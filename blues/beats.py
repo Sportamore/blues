@@ -76,7 +76,6 @@ stop.__doc__ = 'Stop beats'
 restart.__doc__ = 'Restart beats'
 status.__doc__ = 'Get beats status'
 
-
 @task
 def setup():
     """
@@ -135,10 +134,9 @@ def configure():
                     'type': doc_type
                 }
             }
-
+            input_conf["close_timeout"] = "15m" 
             if isinstance(input_spec, list):
                 input_conf['paths'] = input_spec
-
             else:
                 input_conf.update(input_spec)
 

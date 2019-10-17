@@ -125,14 +125,14 @@ def install_plugin_agent():
         python.install()
         python.pip('install', 'newrelic-plugin-agent')
 
-        if debian.lsb_release() == '16.04':
-            blueprint.upload('newrelic-plugin-agent.service',
-                             '/etc/systemd/system/newrelic-plugin-agent.service')
-        else:
+        if debian.lsb_release() == '14.04':
             blueprint.upload('newrelic-plugin-agent.init',
                              '/etc/init.d/newrelic-plugin-agent')
             debian.chmod('/etc/init.d/newrelic-plugin-agent', '755')
-
+        else:
+            blueprint.upload('newrelic-plugin-agent.service',
+                             '/etc/systemd/system/newrelic-plugin-agent.service')
+            
 
 
 @task
