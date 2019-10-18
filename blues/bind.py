@@ -131,3 +131,4 @@ def configure(force_reload=False):
 
         if uploads or force_reload:
             reload()
+        info('If the records to not start resolving properly\nRun "rndc refresh <zone>" on the DNS slaves\n(Hades and Chaos)')
