@@ -616,7 +616,7 @@ def disable_swap():
             output = run(r"cat /etc/fstab | grep '{}' || true".format(regex_match))
             fstab = output.stdout
             if fstab:
-                info('Disabling the following mount points: \n {}'.format(fstab))
+                info('Disabling the following mount points:\n{}'.format(fstab))
                 run(r"sed -i '/{}/ s/^/#/' /etc/fstab".format(regex_match))
                 info('Turning off live swap')
                 run('swapoff -a || true')
