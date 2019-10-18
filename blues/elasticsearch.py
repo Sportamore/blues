@@ -152,6 +152,11 @@ def configure():
     service_dir = "/etc/systemd/system/elasticsearch.service.d"
 
     debian.mkdir(service_dir)
+
+    disable_swap = blueprint.get('node.disable_swap', False)
+    if disable_swap:
+        debian.disable_swap()
+
     changes += blueprint.upload('./override.conf', service_dir + '/override.conf', context)
 
     if changes:
