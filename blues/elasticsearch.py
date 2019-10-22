@@ -172,27 +172,34 @@ def add_gcs_credentials():
         hostname = debian.hostname()
     node_name = blueprint.get('node.name', hostname)
 
-    cred_file = '/scs-elastic-snapshots-user.json'
-    bin_path = '/usr/share/elasticsearch/bin/'
+    repos = blueprint.get('cluster.repositories', [])
+
+    for repo in repos:
+
+        if 'client' in repos[repo]:
+            client = repos[repo]['client']
+        else:
+            client = 'default'
+
+        cred_file = '/scs-elastic-snapshots-user-{}.json'.format(client)
+        bin_path = '/usr/share/elasticsearch/bin/'
 
 
-    blueprint.upload('./{}/scs-elastic-snapshots-user.json'.format(env.state),
-                    cred_file, user='root', group='root')
+        blueprint.upload('./{}/scs-elastic-snapshots-user-{}.json'.format(env.state, client),
+                        cred_file, user='root', group='root')
 
-    client = 'default'
+        with sudo():
+            run('{}elasticsearch-keystore add-file gcs.client.{}.credentials_file {}'.format(bin_path, client, cred_file))
+            run('rm {} {}.md5 || true'.format(cred_file, cred_file))
 
-    with sudo():
-        run('{}elasticsearch-keystore add-file gcs.client.{}.credentials_file {}'.format(bin_path, client, cred_file))
-        run('rm {} {}.md5'.format(cred_file, cred_file))
-        
-        reload_url = 'http://{}:9200/_nodes/reload_secure_settings'.format(node_name)
-        reload_reply = requests.post(url = reload_url)
+    reload_url = 'http://{}:9200/_nodes/reload_secure_settings'.format(node_name)
+    reload_reply = requests.post(url = reload_url)
 
-        status_code = reload_reply.status_code
-            
-        if status_code != 200:
-            abort("Could not reload keystore\nstatus code: {}\nmessage:\n{}".format(
-                status_code, reload_reply.text))
+    status_code = reload_reply.status_code
+
+    if status_code != 200:
+        abort("Could not reload keystore\nstatus code: {}\nmessage:\n{}".format(
+            status_code, reload_reply.text))
 
 @task
 def add_elastic_snapshot_repos():
