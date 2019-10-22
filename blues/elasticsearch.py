@@ -184,8 +184,15 @@ def add_gcs_credentials():
     with sudo():
         run('{}elasticsearch-keystore add-file gcs.client.{}.credentials_file {}'.format(bin_path, client, cred_file))
         run('rm {} {}.md5'.format(cred_file, cred_file))
+        
         reload_url = 'http://{}:9200/_nodes/reload_secure_settings'.format(node_name)
-        requests.post(url = reload_url)
+        reload_reply = requests.post(url = reload_url)
+
+        status_code = reload_reply.status_code
+            
+        if status_code != 200:
+            abort("Could not reload keystore\nstatus code: {}\nmessage:\n{}".format(
+                status_code, reload_reply.text))
 
 @task
 def add_elastic_snapshot_repos():
