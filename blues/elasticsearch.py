@@ -42,7 +42,7 @@ from . import debian
 from refabric.operations import run
 
 __all__ = ['start', 'stop', 'restart', 'reload', 'setup', 'configure',
-           'install_plugin', 'add_elastic_snapshot_repos']
+           'install_plugin', 'add_elastic_snapshot_repos', 'add_gcs_credentials']
 
 
 blueprint = blueprints.get(__name__)
@@ -119,7 +119,8 @@ def configure():
     repo_locations = []
     if cluster_repos:
         for repo in cluster_repos:
-            repo_locations.append('"{}"'.format(cluster_repos[repo]['location']))
+            if cluster_repos[repo]['type'] == 'fs':
+                repo_locations.append('"{}"'.format(cluster_repos[repo]['location']))
     repo_locations = '[ {} ]'.format(", ".join(repo_locations))
 
     changes = []
@@ -152,11 +153,53 @@ def configure():
     service_dir = "/etc/systemd/system/elasticsearch.service.d"
 
     debian.mkdir(service_dir)
+
+    disable_swap = blueprint.get('node.disable_swap', False)
+    if disable_swap:
+        debian.disable_swap()
+
     changes += blueprint.upload('./override.conf', service_dir + '/override.conf', context)
 
     if changes:
         restart()
 
+@task
+def add_gcs_credentials():
+    import requests
+    from fabric.state import env
+
+    with silent():
+        hostname = debian.hostname()
+    node_name = blueprint.get('node.name', hostname)
+
+    repos = blueprint.get('cluster.repositories', [])
+
+    for repo in repos:
+
+        if 'client' in repos[repo]:
+            client = repos[repo]['client']
+        else:
+            client = 'default'
+
+        cred_file = '/scs-elastic-snapshots-user-{}.json'.format(client)
+        bin_path = '/usr/share/elasticsearch/bin/'
+
+
+        blueprint.upload('./{}/scs-elastic-snapshots-user-{}.json'.format(env.state, client),
+                        cred_file, user='root', group='root')
+
+        with sudo():
+            run('{}elasticsearch-keystore add-file gcs.client.{}.credentials_file {}'.format(bin_path, client, cred_file))
+            run('rm {} {}.md5 || true'.format(cred_file, cred_file))
+
+    reload_url = 'http://{}:9200/_nodes/reload_secure_settings'.format(node_name)
+    reload_reply = requests.post(url = reload_url)
+
+    status_code = reload_reply.status_code
+
+    if status_code != 200:
+        abort("Could not reload keystore\nstatus code: {}\nmessage:\n{}".format(
+            status_code, reload_reply.text))
 
 @task
 def add_elastic_snapshot_repos():
@@ -172,14 +215,29 @@ def add_elastic_snapshot_repos():
 
         if repocheck.status_code == 404:
             info("Adding elastic snapshot repository '{}'".format(repo))
-
             url = 'http://{}:9200/_snapshot/{}'.format(node_name, repo)
-            body = {
-                "type": repos[repo]['type'],
-                "settings": {
-                    "location": repos[repo]['location']
+
+            if repos[repo]['type'] == 'gcs':
+
+                if 'client' in repos[repo]:
+                    client = repos[repo]['client']
+                else:
+                    client = 'default'
+
+                body = {
+                    "type": 'gcs',
+                    "settings": {
+                        "bucket": repos[repo]['bucket'],
+                        "client": client
+                    }
                 }
-            }
+            else:
+                body = {
+                    "type": repos[repo]['type'],
+                    "settings": {
+                        "location": repos[repo]['location']
+                    }
+                }
 
             repoadd_reply = requests.put(url = url, json = body)
             status_code = repoadd_reply.status_code
@@ -196,3 +254,4 @@ def install_plugin(name=None):
 
     with sudo():
         run('/usr/share/elasticsearch/bin/elasticsearch-plugin install {}'.format(name))
+        restart()

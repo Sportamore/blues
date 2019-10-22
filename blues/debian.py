@@ -606,6 +606,22 @@ def add_fstab(filesystem=None, mount_point=None, type='auto', options='rw', dump
         if mounted_file_system and mounted_file_system != filesystem:
             unmount(mount_point)
 
+def disable_swap():
+    """
+    Disable swap and remove swap configuration from /etc/fstab.
+    """
+    with sudo():
+        with silent():
+            regex_match = r'^[^#].*\sswap\s'
+            output = run(r"cat /etc/fstab | grep '{}' || true".format(regex_match))
+            fstab = output.stdout
+            if fstab:
+                info('Disabling the following mount points:\n{}'.format(fstab))
+                run(r"sed -i '/{}/ s/^/#/' /etc/fstab".format(regex_match))
+                info('Turning off live swap')
+                run('swapoff -a || true')
+            
+
 def validate_boot_options(options):
     """
     Validate systemd boot options
