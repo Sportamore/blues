@@ -176,21 +176,23 @@ def add_gcs_credentials():
 
     for repo in repos:
 
-        if 'client' in repos[repo]:
-            client = repos[repo]['client']
-        else:
-            client = 'default'
+        if repos[repo]['type'] == 'gcs': 
 
-        cred_file = '/scs-elastic-snapshots-user-{}.json'.format(client)
-        bin_path = '/usr/share/elasticsearch/bin/'
+            if 'client' in repos[repo]:
+                client = repos[repo]['client']
+            else:
+                client = 'default'
+
+            cred_file = '/elastic-snapshots-user-{}.json'.format(client)
+            bin_path = '/usr/share/elasticsearch/bin/'
 
 
-        blueprint.upload('./{}/scs-elastic-snapshots-user-{}.json'.format(env.state, client),
-                        cred_file, user='root', group='root')
+            blueprint.upload('./{}/elastic-snapshots-user-{}.json'.format(env.state, client),
+                            cred_file, user='root', group='root')
 
-        with sudo():
-            run('{}elasticsearch-keystore add-file gcs.client.{}.credentials_file {}'.format(bin_path, client, cred_file))
-            run('rm {} {}.md5 || true'.format(cred_file, cred_file))
+            with sudo():
+                run('{}elasticsearch-keystore add-file gcs.client.{}.credentials_file {}'.format(bin_path, client, cred_file))
+                run('rm {} {}.md5 || true'.format(cred_file, cred_file))
 
     reload_url = 'http://{}:9200/_nodes/reload_secure_settings'.format(node_name)
     reload_reply = requests.post(url = reload_url)
@@ -217,25 +219,32 @@ def add_elastic_snapshot_repos():
             info("Adding elastic snapshot repository '{}'".format(repo))
             url = 'http://{}:9200/_snapshot/{}'.format(node_name, repo)
 
+            if 'readonly' in repos[repo]:
+                readonly = repos[repo]['readonly']
+            else:
+                readonly = 'false'
+
             if repos[repo]['type'] == 'gcs':
 
                 if 'client' in repos[repo]:
                     client = repos[repo]['client']
                 else:
                     client = 'default'
-
+                
                 body = {
                     "type": 'gcs',
                     "settings": {
                         "bucket": repos[repo]['bucket'],
-                        "client": client
+                        "client": client,
+                        "readonly": readonly
                     }
                 }
             else:
                 body = {
                     "type": repos[repo]['type'],
                     "settings": {
-                        "location": repos[repo]['location']
+                        "location": repos[repo]['location'],
+                        "readonly": readonly
                     }
                 }
 
