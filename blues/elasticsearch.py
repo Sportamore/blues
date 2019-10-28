@@ -219,25 +219,32 @@ def add_elastic_snapshot_repos():
             info("Adding elastic snapshot repository '{}'".format(repo))
             url = 'http://{}:9200/_snapshot/{}'.format(node_name, repo)
 
+            if 'readonly' in repos[repo]:
+                    readonly = repos[repo]['readonly']
+                else:
+                    readonly = 'false'
+
             if repos[repo]['type'] == 'gcs':
 
                 if 'client' in repos[repo]:
                     client = repos[repo]['client']
                 else:
                     client = 'default'
-
+                
                 body = {
                     "type": 'gcs',
                     "settings": {
                         "bucket": repos[repo]['bucket'],
-                        "client": client
+                        "client": client,
+                        "readonly": readonly
                     }
                 }
             else:
                 body = {
                     "type": repos[repo]['type'],
                     "settings": {
-                        "location": repos[repo]['location']
+                        "location": repos[repo]['location'],
+                        "readonly": readonly
                     }
                 }
 
