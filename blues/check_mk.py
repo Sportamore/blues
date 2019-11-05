@@ -11,8 +11,7 @@ CHECK_MK Bluep1rint
 
     settings:
       check_mk:
-         whitelist:
-           - 10.130.230.85
+         whitelist: 10.130.230.85
 """
 import os
 from time import time
@@ -71,7 +70,7 @@ def install():
             info("Catalog already exists")
         else:
             debian.mkdir("/usr/lib/check_mk_agent")
-               debian.mkdir("/usr/lib/check_mk_agent/plugins")
+            debian.mkdir("/usr/lib/check_mk_agent/plugins")
             info("Catalogs created")
         if uploads:
             debian.chmod("/usr/local/bin/check_mk_agent",mode=755)

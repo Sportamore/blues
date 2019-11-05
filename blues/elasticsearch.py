@@ -11,7 +11,7 @@ Elasticsearch Blueprint
 
     settings:
       elasticsearch:
-        # branch: 6.x                      # Major Version of elasticsearch (default: 2.x)
+        # branch: 7.x                      # Major Version of elasticsearch (default: 7.x)
         # version: latest                  # Speciifc version of elasticsearch to install
         # cluster:
           # name: foobar                   # Name of the cluster (Default: elasticsearch)
@@ -20,13 +20,14 @@ Elasticsearch Blueprint
         # node:
           # name: foobarnode               # Node name (Default: <hostname>)
           # heap_size: 16gb                # Heap Size (defaults to 256m min, 1g max)
-          # lock_memory: true              # Allocate the entire heap during startup (Default: True)
-          # master: true                   # Allow node to be elected master (Default: True)
-          # data: true                     # Allow node to store data (Default: True)
+          # lock_memory: true              # Allocate the entire heap during startup (Default: false)
+          # disable_swap: false            # Disable swap on nodes (Default: true)
+          # master: true                   # Allow node to be elected master (Default: true)
+          # data: true                     # Allow node to store data (Default: true)
           # bind: _site_                   # Set the bind address specifically, IPv4 or IPv6 (Default: _local_)
         # queue_size: 3000                 # Set thread pool queue size (Default: 1000)
         # plugins:                         # Optional list of plugins to install
-        #   - mobz/elasticsearch-head
+        #   - repository-gcs
 
 """
 import yaml
@@ -76,7 +77,7 @@ def add_elastic_repo(branch):
 
 def install():
     with sudo():
-        branch = blueprint.get('branch', '6.x')
+        branch = blueprint.get('branch', '7.x')
         add_elastic_repo(branch)
 
         # ES 7 and higher bundles java
