@@ -118,10 +118,13 @@ def configure():
 
     cluster_repos = blueprint.get('cluster.repositories', [])
     repo_locations = []
+    repo_url_locations = []
     if cluster_repos:
         for repo in cluster_repos:
             if cluster_repos[repo]['type'] == 'fs':
                 repo_locations.append('"{}"'.format(cluster_repos[repo]['location']))
+            elif cluster_repos[repo]['type'] == 'url':
+                repo_url_locations.append('"{}"'.format(cluster_repos[repo]['url']))
     repo_locations = '[ {} ]'.format(", ".join(repo_locations))
 
     changes = []
@@ -131,6 +134,7 @@ def configure():
         'cluster_size': cluster_size,
         'zen_unicast_hosts': yaml.dump(cluster_nodes) if len(cluster_nodes) else None,
         'repos': repo_locations if len(repo_locations) else None,
+        'urls': repo_url_locations if len(repo_url_locations) else None,
         'node_name': blueprint.get('node.name', hostname),
         'node_master': yaml_boolean(blueprint.get('node.master', True)),
         'node_data': yaml_boolean(blueprint.get('node.data', True)),
@@ -238,6 +242,13 @@ def add_elastic_snapshot_repos():
                         "bucket": repos[repo]['bucket'],
                         "client": client,
                         "readonly": readonly
+                    }
+                }
+            elif repos[repo]['type'] == 'url':
+                body = {
+                    "type": repos[repo]['type'],
+                    "settings": {
+                        "url": repos[repo]['url']
                     }
                 }
             else:

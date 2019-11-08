@@ -44,6 +44,11 @@ path.data: {{ data_path }}
 # Path to repositories:
 path.repo: {{ repos }}
 {% endif %}
+{% if urls %}
+#
+# Path to url-repositories:
+repositories.url.allowed_urls: {{ urls }}
+{% endif %}
 #
 # Path to log files:
 #
