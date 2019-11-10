@@ -40,6 +40,8 @@ def toggle_blender():
     user = config.get('endpoint')
     password = config.get('password')
 
+    print endpoint, user, password
+
     info('Toggling Sportamore blender')
     try:
         requests.post(endpoint, timeout=TIMEOUT, auth=(user, password))
