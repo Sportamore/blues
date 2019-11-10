@@ -1,3 +1,4 @@
+# coding=utf-8
 """
 Sportamore-pi Blueprint
 =================
@@ -6,14 +7,12 @@ Sportamore-pi Blueprint
 
 .. code-block:: yaml
 
-    blueprints:
-      - blues.sportamorepi
-
     settings:
       sportamorepi:
         endpoint: EEEE
         user: XXXXX
         password: YYYY
+
 """
 import requests
 from refabric.contrib import blueprints
