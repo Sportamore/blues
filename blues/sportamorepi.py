@@ -45,8 +45,9 @@ def toggle_blender():
         response = requests.post(endpoint, timeout=TIMEOUT,
                                  auth=(user, password))
     except Exception as e:
-        warn('Toggling Sportamore blender failed ({})', e)
+        warn('Toggling Sportamore blender failed ({})'.format(e))
         return
 
     if response.status_code != 200:
-        warn('Toggling Sportamore blender failed ({})', response.status_code)
+        warn('Toggling Sportamore blender failed ({})'.format(
+            response.status_code))
