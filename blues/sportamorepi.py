@@ -31,6 +31,11 @@ TIMEOUT = 3
 
 def toggle_blender():
     config = blueprint.get('')
+
+    if not config:
+        info('No config for Sportamore blender')
+        return
+
     endpoint = config.get('endpoint')
     user = config.get('endpoint')
     password = config.get('password')
