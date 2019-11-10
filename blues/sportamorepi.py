@@ -40,10 +40,13 @@ def toggle_blender():
     user = config.get('user')
     password = config.get('password')
 
-    print endpoint, user, password
-
     info('Toggling Sportamore blender')
     try:
-        requests.post(endpoint, timeout=TIMEOUT, auth=(user, password))
+        response = requests.post(endpoint, timeout=TIMEOUT,
+                                 auth=(user, password))
     except Exception as e:
         warn('Toggling Sportamore blender failed ({})', e)
+        return
+
+    if response.status_code != 200:
+        warn('Toggling Sportamore blender failed ({})', response.status_code)
