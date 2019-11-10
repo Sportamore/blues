@@ -37,7 +37,7 @@ def toggle_blender():
         return
 
     endpoint = config.get('endpoint')
-    user = config.get('endpoint')
+    user = config.get('user')
     password = config.get('password')
 
     print endpoint, user, password
