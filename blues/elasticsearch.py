@@ -126,6 +126,7 @@ def configure():
             elif cluster_repos[repo]['type'] == 'url':
                 repo_url_locations.append('"{}"'.format(cluster_repos[repo]['url']))
     repo_locations = '[ {} ]'.format(", ".join(repo_locations))
+    repo_url_locations = '[ {} ]'.format(", ".join(repo_url_locations))
 
     changes = []
 
