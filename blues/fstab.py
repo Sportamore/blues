@@ -28,6 +28,7 @@ from fabric.utils import warn
 
 from refabric.contrib import blueprints
 from refabric.context_managers import sudo
+from refabric.operations import run
 
 from blues import debian
 
@@ -49,6 +50,8 @@ def setup():
 
 @task
 def configure():
+    with sudo():
+      run("sed -e '/^[^#].* nfs.* /s/^/#/' /etc/fstab -i")
     for mount_point, config in blueprint.get('', {}).items():
         if 'filesystem' in config:
             debian.mount(mount_point, **config)
