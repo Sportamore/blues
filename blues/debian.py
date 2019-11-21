@@ -125,6 +125,47 @@ def hostname():
     return run('hostname -A').stdout.strip()
 
 
+@task
+def apt_check(update=True,only_security=False):
+    """
+    Check if there are updates avalible
+
+    :param update: true of false only_security true of false
+    """
+    if update==True:
+        run('apt-get -qq update')
+    else: ''
+    if only_security:
+        output=run('/usr/lib/update-notifier/apt-check --human-readable|grep security')
+    else:
+        output=run('/usr/lib/update-notifier/apt-check --human-readable')
+    info(output)
+
+@task
+def swap_finder(limit=10):
+    """
+    Finds top swappers
+
+    :param limit: amount of rows 
+    """
+    header='\nprocess pid  memory swap\n'
+    values=run('for file in /proc/*/status ; do awk ' + "'/VmSwap|VmSize|Name|^Pid/{printf $2 " + '" " $3 " "}END{ print "  "}' + "' $file; done | sort -k 5 -n -r|head -n " + str(limit) + ' ')
+    values=header+values
+    info(values)
+
+@task
+def high_oom_score(limit=10):
+    """
+    Finds the process with highest oom_score
+
+    :param limit: amount of rows 
+    """
+    header='\noom_score process pid memory swap\n'
+    values=run('for file in /proc/[0-9]* ;do  awk '+"'/^[0-9]/{printf  $1}END{printf "+'" "'+"}' $file/oom_score; awk '/VmSwap|VmData|Name|^Pid/{printf $2 "+'" " $3 " " $4 }END{print " "}'+"'"+' $file/status; done |sort -r -k 1 -n |head -n '+ str(limit) +' ' )
+    values=header+values
+    info(values)
+
+
 def apt_get(command, *args, **kwargs):
     env = kwargs
     env.update({
