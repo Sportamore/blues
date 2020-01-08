@@ -156,6 +156,9 @@ def configure():
     changes += blueprint.upload('./default', '/etc/default/elasticsearch',
                                 context=context, user='elasticsearch')
 
+    changes += blueprint.upload('./log4j2.properties', '/etc/elasticsearch/',
+                                context=context, user='elasticsearch')
+
     service_dir = "/etc/systemd/system/elasticsearch.service.d"
 
     debian.mkdir(service_dir)
