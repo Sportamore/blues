@@ -77,6 +77,7 @@ def version():
 def showmigrations(show_all=False):
     """
     Show unapplied (or all) migrations.
+    Returns nr of unapplied migrations.
     """
     from blues import django
     with silent():
@@ -94,6 +95,9 @@ def showmigrations(show_all=False):
             info(migration)
         else:
             warn(migration)
+
+    unapplied_migrations = len([m for m in migrations if m.startswith('[ ]')])
+    return unapplied_migrations
 
 
 @task
