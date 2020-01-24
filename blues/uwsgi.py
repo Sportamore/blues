@@ -93,6 +93,7 @@ def configure():
             debian.chmod('/etc/init.d/uwsgi',mode=755)
         else:
             blueprint.upload('systemd/uwsgi.service', '/etc/systemd/system/uwsgi.service')
+            blueprint.upload('tmpfiles.d/uwsgi.conf', '/etc/tmpfiles.d/uwsgi.conf')
             debian.systemd_daemon_reload()
             
 

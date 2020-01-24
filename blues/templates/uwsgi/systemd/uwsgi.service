@@ -3,12 +3,18 @@ Description=uWSGI Emperor service
 After=syslog.target
 
 [Service]
-ExecStart=/usr/local/bin/uwsgi --emperor "{{ settings.emperor|default('/srv/app/*/uwsgi.d/*.ini') }}"
+Environment=NEW_RELIC_LICENSE_KEY={{settings.new_relic_license_key|default('aceac6f9a44c8f5ea728a52c27c7ade6c5b5796c')}}
+Environment=NEW_RELIC_APP_NAME="{{settings.new_relic_app_name|default('SCS-Draft')}}"
+Environment=NEW_RELIC_LOG=/var/log/uwsgi/newrelic.log
+
+ExecStart=/srv/app/scs/env/bin/newrelic-admin run-program /usr/local/bin/uwsgi --emperor {{ settings.emperor|default('/srv/app/scs/uwsgi.d/') }} --emperor-stats /run/uwsgi/emperor-stats.sock --logto /var/log/uwsgi/emperor.log
 Restart=always
 KillSignal=SIGQUIT
 Type=notify
 StandardError=syslog
 NotifyAccess=all
+User=999
+Group=999
 
 [Install]
 WantedBy=multi-user.target
