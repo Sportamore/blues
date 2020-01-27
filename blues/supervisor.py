@@ -104,6 +104,7 @@ def configure():
             debian.chmod('/etc/init.d/supervisor',mode=755)
         else:
             uploads = blueprint.upload('systemd/supervisor.service', '/etc/systemd/system/supervisor.service')
+            uploads = blueprint.upload('tmpfiles.d/supervisor.conf', '/etc/tmpfiles.d/supervisor.conf')
             debian.systemd_daemon_reload()
 
         uploads.extend(blueprint.upload('supervisord.conf', '/etc/') or [])

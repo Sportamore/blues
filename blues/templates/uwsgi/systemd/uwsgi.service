@@ -3,7 +3,7 @@ Description=uWSGI Emperor service
 After=syslog.target
 
 [Service]
-ExecStart=/usr/local/bin/uwsgi --emperor "{{ settings.emperor|default('/srv/app/*/uwsgi.d/*.ini') }}"
+ExecStart=/usr/local/bin/uwsgi --emperor {{ settings.emperor|default('/srv/app/scs/uwsgi.d/') }} --emperor-stats /run/uwsgi/emperor-stats.sock --logto /var/log/uwsgi/emperor.log
 Restart=always
 KillSignal=SIGQUIT
 Type=notify
