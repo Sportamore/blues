@@ -112,3 +112,5 @@ logging.dest: "/var/log/kibana/kibana.log"
 # The default locale. This locale can be used in certain circumstances to substitute any missing
 # translations.
 #i18n.defaultLocale: "en"
+
+xpack.reporting.encryptionKey: "P0jm8rsAmGgX4UJcAe9PApATM2fFx2"
