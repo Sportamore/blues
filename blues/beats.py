@@ -131,7 +131,7 @@ def configure():
             input_conf = {
                 'fields_under_root': True,
                 'fields': {
-                    'type': doc_type
+                    'logfile_type': doc_type
                 }
             }
             input_conf["close_timeout"] = "15m" 
