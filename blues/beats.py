@@ -28,10 +28,6 @@ Beats Blueprint
             nginx-access:                # The log_type to add to the event
               - '/var/log/*.log'         # Wildcards are supported
 
-        metricbeat:
-          modules:                       # One or more modules to activate
-            - system
-
 """
 import yaml
 import os.path
@@ -61,7 +57,7 @@ def service(target=None, action=None):
     """
     Debian service dispatcher for logstash server and forwarder
     """
-    for beat in ('filebeat', 'metricbeat'):
+    for beat in ('filebeat'):
         if is_beat(beat):
             debian.service(beat, action, check_status=False)
 
@@ -87,7 +83,7 @@ def setup():
         branch = blueprint.get('branch', '6.x')
         add_elastic_repo(branch)
 
-        for beat in ('filebeat', 'metricbeat'):
+        for beat in ('filebeat'):
             if is_beat(beat):
                 version = blueprint.get('version', 'latest')
                 info('Installing {} version {}', beat, version)
@@ -153,13 +149,6 @@ def configure():
                                     context=context)
 
         module_changes += update_modules('filebeat')
-
-    if is_beat('metricbeat'):
-        uploads += blueprint.upload('metricbeat.yml',
-                                    '/etc/metricbeat/metricbeat.yml',
-                                    context=base_context)
-
-        module_changes += update_modules('metricbeat')
 
     if uploads or module_changes:
         restart()
