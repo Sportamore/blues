@@ -53,19 +53,10 @@ def is_beat(name):
     return blueprint.get(name) is not None
 
 
-def service(target=None, action=None):
-    """
-    Debian service dispatcher for logstash server and forwarder
-    """
-    for beat in ('filebeat'):
-        if is_beat(beat):
-            debian.service(beat, action, check_status=False)
-
-
-start = task(partial(service, action='start'))
-stop = task(partial(service, action='stop'))
-restart = task(partial(service, action='restart'))
-status = task(partial(service, action='status'))
+start = debian.service('filebeat', 'start', check_status=False)
+stop = debian.service('filebeat', 'stop', check_status=False)
+restart = debian.service('filebeat', 'restart', check_status=False)
+status = debian.service('filebeat', 'status', check_status=False)
 
 start.__doc__ = 'Start beats'
 stop.__doc__ = 'Stop beats'
