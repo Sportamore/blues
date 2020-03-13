@@ -134,7 +134,7 @@ def configure():
                     'logfile_type': doc_type
                 }
             }
-            input_conf["close_timeout"] = "15m" 
+            input_conf["close_timeout"] = "480m" 
             if isinstance(input_spec, list):
                 input_conf['paths'] = input_spec
             else:
