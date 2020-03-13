@@ -104,10 +104,10 @@ def add_scheduled_prune(interval):
     """
 
     if interval in {'hourly', 'daily', 'weekly', 'monthly'}:
-        target_location = "/etc/cron.{}/docker-system-prune.sh".format(interval)
+        target_location = "/etc/cron.{}/docker-system-prune".format(interval)
         with sudo():
             info('Add recurring purge of Docker containers, images and volumes')
-            blueprint.upload('./docker-system-prune.sh', target_location)
+            blueprint.upload('./docker-system-prune', target_location)
             debian.chmod(target_location, mode="755")
     else:
         raise ValueError("Interval was '{}' but should be one of: 'hourly', 'daily', 'weekly' or 'monthly'".format(interval))
@@ -120,4 +120,4 @@ def remove_scheduled_prune():
 
     with sudo():
         info('Remove recurring purge of Docker containers, images and volumes')
-        debian.rm('/etc/cron.*/docker-system-prune.sh*')
+        debian.rm('/etc/cron.*/docker-system-prune*')
