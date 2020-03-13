@@ -53,10 +53,10 @@ def is_beat(name):
     return blueprint.get(name) is not None
 
 
-start = debian.service('filebeat', 'start', check_status=False)
-stop = debian.service('filebeat', 'stop', check_status=False)
-restart = debian.service('filebeat', 'restart', check_status=False)
-status = debian.service('filebeat', 'status', check_status=False)
+start = debian.service_task('filebeat', 'start')
+stop = debian.service_task('filebeat', 'stop')
+restart = debian.service_task('filebeat', 'restart')
+status = debian.service_task('filebeat', 'status')
 
 start.__doc__ = 'Start beats'
 stop.__doc__ = 'Stop beats'
