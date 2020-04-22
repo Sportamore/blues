@@ -82,7 +82,7 @@ def activate_account():
         'service_account_key': blueprint.get('service-account-key', ''),
     }
 
-    uploads = blueprint.upload('gcloud-service-account.json', '/gcloud-service-account.json', context)
+    blueprint.upload('gcloud-service-account.json', '/gcloud-service-account.json', context)
     debian.chmod('/gcloud-service-account.json', mode=600, owner=blueprint.get('linux-user', 'root'), group=blueprint.get('linux-user', 'root'))
 
     with sudo(user=blueprint.get('linux-user', None)):
