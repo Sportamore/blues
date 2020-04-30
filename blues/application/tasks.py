@@ -84,7 +84,7 @@ def deploy(revision=None, auto_reload=True, force=False, update_pip=False):
         'service_account_key': gcloudAccountKey,
         }
 
-        blueprint.upload('../gcloud/gcloud-service-account.json',
+        blueprint.upload('gcloud/gcloud-service-account.json',
             os.path.join(project_home(), 'gcloud-service-account.json'),
             context, user=project_name())
 
