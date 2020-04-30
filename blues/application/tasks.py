@@ -86,7 +86,13 @@ def deploy(revision=None, auto_reload=True, force=False, update_pip=False):
 
         blueprint.upload('gcloud/gcloud-service-account.json',
             os.path.join(project_home(), 'gcloud-service-account.json'),
-            context, user=project_name())
+            context,
+            user=project_name())
+        debian.chmod(
+            os.path.join(project_home(),'gcloud-service-account.json'),
+            mode=600,
+            owner=project_name(),
+            group=project_name())
 
     if code_changed or force:
         # Install python dependencies
