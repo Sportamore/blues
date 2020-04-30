@@ -64,7 +64,9 @@ def deploy(revision=None, auto_reload=True, force=False, update_pip=False):
     :return bool: Source code has changed?
     """
     from .deploy import update_source
-    from .project import use_virtualenv
+    from .project import use_virtualenv, project_home, project_name
+    from ..debian import chmod
+    from refabric.context_managers import silent
 
     # Reset git repo
     previous_commit, current_commit = update_source(revision)
@@ -75,6 +77,26 @@ def deploy(revision=None, auto_reload=True, force=False, update_pip=False):
 
     else:
         info('Reset git repository to: {}', current_commit)
+
+    # Add Google Service User Credentials if present
+    gcloudAccountKey = blueprint.get('gcloud_service_account_key')
+
+    if gcloudAccountKey:
+        context = {
+        'service_account_key': gcloudAccountKey,
+        }
+
+        blueprint.upload('gcloud/gcloud-service-account.json',
+            os.path.join(project_home(), 'gcloud-service-account.json'),
+            context,
+            user=project_name())
+
+        with silent():
+            chmod(
+                os.path.join(project_home(),'gcloud-service-account.json'),
+                mode=600,
+                owner=project_name(),
+                group=project_name())
 
     if code_changed or force:
         # Install python dependencies

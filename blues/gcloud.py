@@ -37,7 +37,7 @@ from . import debian
 
 
 
-__all__ = ['setup', 'activate_account']
+__all__ = ['setup', 'activate_account', 'install']
 
 
 blueprint = blueprints.get(__name__)
@@ -50,7 +50,7 @@ def setup():
     install()
     activate_account()
 
-
+@task
 def install():
     """
     Install Google Cloud SDK
