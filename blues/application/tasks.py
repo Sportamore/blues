@@ -76,6 +76,18 @@ def deploy(revision=None, auto_reload=True, force=False, update_pip=False):
     else:
         info('Reset git repository to: {}', current_commit)
 
+    # Add Google Service User Credentials if present
+    gcloudAccountKey = blueprint.get('gcloud_service_account_key')
+
+    if gcloudAccountKey:
+        context = {
+        'service_account_key': gcloudAccountKey,
+        }
+
+        blueprint.upload('../gcloud/gcloud-service-account.json',
+            os.path.join(project_home(), 'gcloud-service-account.json'),
+            context, user=project_name())
+
     if code_changed or force:
         # Install python dependencies
         if use_virtualenv():
