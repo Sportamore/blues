@@ -65,6 +65,7 @@ def deploy(revision=None, auto_reload=True, force=False, update_pip=False):
     """
     from .deploy import update_source
     from .project import use_virtualenv, project_home, project_name
+    from ..debian import chmod
 
     # Reset git repo
     previous_commit, current_commit = update_source(revision)
@@ -88,7 +89,7 @@ def deploy(revision=None, auto_reload=True, force=False, update_pip=False):
             os.path.join(project_home(), 'gcloud-service-account.json'),
             context,
             user=project_name())
-        debian.chmod(
+        chmod(
             os.path.join(project_home(),'gcloud-service-account.json'),
             mode=600,
             owner=project_name(),
