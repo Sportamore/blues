@@ -64,7 +64,7 @@ def deploy(revision=None, auto_reload=True, force=False, update_pip=False):
     :return bool: Source code has changed?
     """
     from .deploy import update_source
-    from .project import use_virtualenv
+    from .project import use_virtualenv, project_home, project_name
 
     # Reset git repo
     previous_commit, current_commit = update_source(revision)
