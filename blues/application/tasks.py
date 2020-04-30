@@ -66,6 +66,7 @@ def deploy(revision=None, auto_reload=True, force=False, update_pip=False):
     from .deploy import update_source
     from .project import use_virtualenv, project_home, project_name
     from ..debian import chmod
+    from refabric.context_managers import silent
 
     # Reset git repo
     previous_commit, current_commit = update_source(revision)
@@ -89,11 +90,13 @@ def deploy(revision=None, auto_reload=True, force=False, update_pip=False):
             os.path.join(project_home(), 'gcloud-service-account.json'),
             context,
             user=project_name())
-        chmod(
-            os.path.join(project_home(),'gcloud-service-account.json'),
-            mode=600,
-            owner=project_name(),
-            group=project_name())
+
+        with silent():
+            chmod(
+                os.path.join(project_home(),'gcloud-service-account.json'),
+                mode=600,
+                owner=project_name(),
+                group=project_name())
 
     if code_changed or force:
         # Install python dependencies
