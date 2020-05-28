@@ -80,7 +80,7 @@ def install(for_user=None):
 
     with sudo():
         lsb_release = debian.lsb_release()
-        if lsb_release in ('14.04', '16.04'):
+        if lsb_release in ('14.04', '16.04','18.04','20.04'):
             codename = debian.lsb_codename()
             version = get_version()
 
